@@ -1,0 +1,83 @@
+'use client';
+import { useApp } from './AppProvider';
+import { Tier, DateBlock, StatusPill, Confirm } from './ui';
+import { IcCheck, IcPlus } from './icons';
+import { GS, MODES, TICKETS, ROLE_LABEL, chf, dateLabel, place, type Req } from '@/lib/model';
+
+export default function MyEvents() {
+  const { me, data, ev, open, act, busy, group, setGroup, people, today } = useApp();
+  const mine = data.requests.filter(r => r.personId === me.id && r.status !== 'withdrawn');
+  const byDate = (a: Req, b: Req) => (ev.get(a.eventId)?.sd?.getTime() ?? 9e15) - (ev.get(b.eventId)?.sd?.getTime() ?? 9e15);
+  const started = (r: Req) => { const e = ev.get(r.eventId); return !!e && !!e.sd && e.mode !== 'tbd' && e.sd <= today; };
+  const needs = (r: Req) => r.status === 'approved' && !r.rating && (!r.hubspot || started(r));
+  const act1 = mine.filter(needs).sort(byDate);
+  const wait = mine.filter(r => r.status === 'requested').sort(byDate);
+  const upc = mine.filter(r => r.status === 'approved' && !r.rating && !needs(r)).sort(byDate);
+  const closed = mine.filter(r => r.status === 'approved' && r.rating).sort(byDate).reverse();
+  const dec = mine.filter(r => r.status === 'declined').sort(byDate);
+  const leads = closed.reduce((a, r) => a + (r.leads || 0), 0);
+
+  const card = (r: Req) => {
+    const e = ev.get(r.eventId); if (!e) return null;
+    const by = r.decidedBy ? people.get(r.decidedBy)?.name : null;
+    return (
+      <article key={r.id} className="mine">
+        <DateBlock e={e} />
+        <div style={{ minWidth: 0 }}>
+          <button className="nm" onClick={() => open({ kind: 'event', id: e.id, view: 'detail' })}>{e.name}</button>
+          <div className="sub">{place(e)} · {dateLabel(e)} · {MODES[r.mode][0]}{r.ticket === 'paid' ? ` · ${chf(r.cost)}` : ` · ${TICKETS[r.ticket][0].toLowerCase()}`}</div>
+        </div>
+        <div className="side"><Tier e={e} /><StatusPill r={r} past={started(r)} /></div>
+        <div className="todo">
+          {r.decisionNote && <div className="todo-i"><span className="dim">{r.status === 'declined' ? 'Declined' : 'Note'}{by ? ` by ${by}` : ''}: “{r.decisionNote}”</span></div>}
+          {r.status === 'requested' && <div className="todo-i"><span className="dim">Waiting for the events team · {r.meetingsPlanned} meetings planned · {r.groups.map(g => GS[g]).join(', ')}</span>
+            <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}><button className="btn sm line" onClick={() => open({ kind: 'event', id: e.id, view: 'edit-request', rid: r.id })}>Change</button>
+              <Confirm label="Withdraw" sure="Yes, withdraw" disabled={busy} onYes={() => act('request_withdraw', { p_id: r.id }, 'Request withdrawn')} /></span></div>}
+          {r.status === 'approved' && <>
+            <div className={`todo-i ${r.hubspot ? 'done' : ''}`}><span className={`check ${r.hubspot ? 'on' : ''}`}>{r.hubspot && <IcCheck s={12} />}</span><span className="lbl">Create the event in HubSpot</span>
+              {!r.hubspot ? <button className="btn sm" disabled={busy} onClick={() => act('request_hubspot', { p_id: r.id, p_done: true }, 'HubSpot step done')}>Mark as done</button>
+                : !r.rating && <button className="btn ghost sm" disabled={busy} onClick={() => act('request_hubspot', { p_id: r.id, p_done: false })}>Undo</button>}</div>
+            <div className={`todo-i ${r.rating ? 'done' : ''}`}><span className={`check ${r.rating ? 'on' : ''}`}>{r.rating ? <IcCheck s={12} /> : null}</span>
+              <span className="lbl">{started(r) ? 'Assign leads in HubSpot and debrief' : 'After the event: assign leads and debrief'}</span>
+              {r.rating ? <span className="dim small" style={{ marginLeft: 'auto' }}>{r.leads} leads · rated {r.rating}/5 · go again: {r.goAgain}</span>
+                : started(r) && <button className="btn red sm" onClick={() => open({ kind: 'event', id: e.id, view: 'debrief', rid: r.id })}>Start 60-sec debrief</button>}</div>
+            {!started(r) && <div className="todo-i"><Confirm label="I can’t go any more" sure="Yes, cancel my spot" disabled={busy} onYes={() => act('request_withdraw', { p_id: r.id }, 'Spot cancelled. The events team sees it.')} /></div>}
+          </>}
+        </div>
+      </article>
+    );
+  };
+  const sec = (t: string, lede: string, arr: Req[]) => arr.length > 0 && (
+    <section className="sect"><h2 className="h2">{t} <span className="tag">{arr.length}</span></h2>{lede && <p className="lede">{lede}</p>}<div className="card">{arr.map(card)}</div></section>
+  );
+  return (
+    <main className="page">
+      <section className="head">
+        <div><p className="k">{me.name} · {ROLE_LABEL[me.role]}{me.market ? ` · ${me.market}` : ''}</p><h1 className="title">My <em>events</em>.</h1>
+          <p className="lede">What you requested, what was decided and what’s left to do in HubSpot.</p></div>
+        <div className="stats">
+          <div className="stat"><b className="num">{upc.length + act1.length}</b><span>approved</span></div>
+          <div className="stat"><b className="num">{wait.length}</b><span>waiting</span></div>
+          <div className="stat red"><b className="num">{leads}</b><span>leads from your events</span></div>
+        </div>
+      </section>
+      <div className="toolbar">
+        <label className="dim small" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>Your main target group
+          <select className="select sm" style={{ width: 220 }} value={group} onChange={e => setGroup(Number(e.target.value))}>{GS.map((g, i) => <option key={g} value={i}>{g}</option>)}</select></label>
+        <span style={{ flex: 1 }} />
+        <button className="btn line" onClick={() => open({ kind: 'suggest' })}><IcPlus />Suggest an event</button>
+      </div>
+      {!mine.length && <div className="card empty" style={{ marginTop: 10 }}>Nothing yet. Find an event in Discover and request it.</div>}
+      {sec('Needs your action', 'HubSpot and debriefs for events you were approved for.', act1)}
+      {sec('Waiting for the events team', '', wait)}
+      {sec('Coming up', '', upc)}
+      {sec('Closed', 'Debrief done, leads logged.', closed)}
+      {sec('Declined', '', dec)}
+      {data.suggestions.filter(s => s.by === me.id).length > 0 && (
+        <section className="sect"><h2 className="h2">Your suggestions</h2><div className="card">{data.suggestions.filter(s => s.by === me.id).map(s => (
+          <div key={s.id} className="mine" style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}><div><b>{s.name}</b><div className="sub">{[s.month, s.city].filter(Boolean).join(' · ') || 'No date yet'}</div></div>
+            <span className={`pill ${s.status === 'added' ? 'ok' : s.status === 'pending' ? 'wait' : 'off'}`}>{s.status === 'added' ? 'In the calendar' : s.status === 'pending' ? 'Waiting' : 'Dismissed'}</span></div>))}</div></section>
+      )}
+    </main>
+  );
+}

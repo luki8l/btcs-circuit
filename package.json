@@ -1,0 +1,27 @@
+{
+  "name": "btcs-circuit",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "next dev",
+    "dev:local": "CIRCUIT_LOCAL_DB=1 CIRCUIT_LOCAL_ADMINS=${CIRCUIT_LOCAL_ADMINS:-admin@example.com} next dev",
+    "build": "next build",
+    "start": "next start",
+    "test:sql": "node tests/sql.test.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.118.0",
+    "next": "15.5.29",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.15",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "typescript": "^5"
+  }
+}
