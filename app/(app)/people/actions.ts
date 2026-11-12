@@ -39,6 +39,8 @@ export async function createPerson(input: unknown): Promise<Res> {
       if (error) return { err: /already/i.test(error.message) ? 'There is already an account with this e-mail.' : error.message };
       uid = data.user!.id;
     }
+    // set role and details explicitly (Supabase writes app_metadata after the insert)
+    await (await rpcClient())('person_save', { p_id: uid, p_name: p.name, p_role: p.role, p_market: p.market, p_team: p.team, p_title: p.title, p_active: true });
     return { ok: true, email: p.email, link: await linkFor(p.email, uid) };
   } catch (e) {
     if (e instanceof z.ZodError) return { err: 'Check the fields: ' + e.issues.map(i => i.path.join('.')).join(', ') };

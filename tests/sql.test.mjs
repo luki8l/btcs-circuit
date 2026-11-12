@@ -35,6 +35,11 @@ const me = await call(ANA, 'me');
 ok(me.name === 'Ana Muster' && me.initials === 'AM' && me.role === 'sales' && me.market === 'Sweden', 'profile from sign-up: name from e-mail, initials, market; a role in user metadata is ignored');
 ok((await call(ADM, 'me')).role === 'admin' && (await call(ROM, 'me')).role === 'events', 'roles from app metadata (set by the server)');
 
+await db.exec(`insert into auth.users (id, email) values ('00000000-0000-0000-0000-0000000000ff', 'late@example.com')`);
+await db.exec(`update auth.users set raw_app_meta_data = '{"provider":"email","role":"events"}' where id = '00000000-0000-0000-0000-0000000000ff'`);
+ok((await call('00000000-0000-0000-0000-0000000000ff', 'me')).role === 'events', 'role set by the server after sign-up is synced to the profile');
+await db.exec(`delete from auth.users where id = '00000000-0000-0000-0000-0000000000ff'`);
+
 console.log('access');
 ok(await err(call(null, 'bootstrap')) === '42501', 'anonymous: functions not callable');
 ok(await err(as(null, 'select * from public.events')) === '42501', 'anonymous: no table access');
