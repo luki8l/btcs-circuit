@@ -4,7 +4,7 @@ External events in one place: sales find a conference, request their spot, the e
 sales log it in HubSpot and debrief afterwards. Management sees coverage, cost and leads per event.
 
 **Pilot rule: the catalogue comes from the internal events masterlist and the accounts are real colleagues.
-Get IT and Compliance to sign off the hosting (Supabase EU / Vercel fra1) before rolling it out widely.**
+Get IT and Compliance to sign off the hosting (Supabase eu-north-1 Stockholm / Vercel arn1) before rolling it out widely.**
 
 ## What's in it
 
@@ -36,7 +36,7 @@ Browser ─► Next.js (Vercel, fra1) ─► /api/act { fn, args }  (zod-validat
 
 ## Setup (once)
 
-1. Supabase project (region Frankfurt). SQL Editor: run `supabase/migrations/*.sql` in order (the second file seeds the 267 masterlist events).
+1. Supabase project (EU region; this one runs in Stockholm, eu-north-1, so Vercel functions run in arn1 next to it). SQL Editor: run `supabase/migrations/*.sql` in order (the second file seeds the 267 masterlist events).
 2. Authentication → Sign-ups off. URL configuration: Site URL = the Vercel URL. Email OTP expiry: 86400 s (links valid 24 h).
 3. Vercel: import the repo, env vars `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` (server only), `NEXT_PUBLIC_SITE_URL`.
 4. First admin: create the user in Supabase (Authentication → Add user) with app metadata `{"role":"admin"}`, or `update public.profiles set role = 'admin' where email = '…';`.
