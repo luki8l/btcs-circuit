@@ -38,15 +38,17 @@ const FNS: Record<string, z.ZodTypeAny> = {
 };
 
 export async function POST(req: Request) {
-  let raw: { fn?: string; args?: unknown } = {};
-  try { raw = await req.json(); } catch { /* empty */ }
-  const schema = raw.fn ? FNS[raw.fn] : undefined;
+  let raw: unknown = null;
+  try { raw = await req.json(); } catch { /* not JSON */ }
+  const body = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw as { fn?: unknown; args?: unknown } : {};
+  const fn = typeof body.fn === 'string' ? body.fn : '';
+  const schema = Object.hasOwn(FNS, fn) ? FNS[fn] : undefined;      // own keys only: no "constructor", "__proto__"…
   if (!schema) return NextResponse.json({ error: 'unknown action' }, { status: 400 });
-  const parsed = schema.safeParse(raw.args ?? {});
+  const parsed = schema.safeParse(body.args ?? {});
   if (!parsed.success) return NextResponse.json({ error: 'Some input is not valid: ' + parsed.error.issues.map(i => `${i.path.join('.')} ${i.message}`).join('; ') }, { status: 400 });
   try {
     const rpc = await rpcClient();
-    const data = await rpc(raw.fn!, parsed.data as Record<string, unknown>);
+    const data = await rpc(fn, parsed.data as Record<string, unknown>);
     return NextResponse.json({ ok: true, data }, { headers: { 'cache-control': 'no-store' } });
   } catch (e) {
     const status = statusOf(e);

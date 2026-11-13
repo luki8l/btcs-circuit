@@ -1,4 +1,5 @@
 'use client';
+import ReportMenu from './ReportMenu';
 // The event catalogue for the events team: every event, edit, add, archive.
 import { useMemo, useState } from 'react';
 import { useApp } from './AppProvider';
@@ -37,6 +38,7 @@ export default function Catalogue() {
         <button className="chip" aria-pressed={past} onClick={() => setPast(p => !p)}>Incl. past</button>
         <button className="chip" aria-pressed={arch} onClick={() => setArch(a => !a)}>Archived</button>
         <span style={{ flex: 1 }} />
+        <ReportMenu />
         <button className="btn red" onClick={() => open({ kind: 'edit', id: null })}><IcPlus />Add event</button>
       </div>
       <p className="count-line"><b>{list.length} events</b></p>

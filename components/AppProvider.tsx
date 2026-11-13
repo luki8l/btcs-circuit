@@ -72,6 +72,7 @@ export default function AppProvider({ data, children }: { data: Data; children: 
   }, []);
 
   const [busy, setBusy] = useState(false);
+  const last = useRef(Date.now());   // last time the data came from the server
   const act = useCallback(async <T,>(fn: string, args: Record<string, unknown>, okMsg?: string) => {
     setBusy(true);
     try {
@@ -80,6 +81,7 @@ export default function AppProvider({ data, children }: { data: Data; children: 
       const j = await res.json().catch(() => ({}));
       if (!res.ok) { toast(j.error || 'That did not work.', true); return { ok: false, error: j.error as string }; }
       if (okMsg) toast(okMsg);
+      last.current = Date.now();
       router.refresh();
       return { ok: true, data: j.data as T };
     } catch {
@@ -87,6 +89,14 @@ export default function AppProvider({ data, children }: { data: Data; children: 
       return { ok: false, error: 'network' };
     } finally { setBusy(false); }
   }, [router, toast]);
+
+  // keep the data fresh without a reload: Roman's inbox, decisions, colleagues' requests
+  useEffect(() => {
+    const fresh = () => { if (document.visibilityState === 'visible' && Date.now() - last.current > 20000 && navigator.onLine) { last.current = Date.now(); router.refresh(); } };
+    const t = setInterval(fresh, 120000);
+    document.addEventListener('visibilitychange', fresh); window.addEventListener('focus', fresh);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', fresh); window.removeEventListener('focus', fresh); };
+  }, [router]);
 
   const [palette, setPalette] = useState(false);
   useEffect(() => {

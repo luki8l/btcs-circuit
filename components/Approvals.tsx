@@ -3,13 +3,14 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useApp } from './AppProvider';
 import { Tier, DateBlock, Av, Confirm, Blank } from './ui';
+import ReportMenu from './ReportMenu';
 import { IcCheck, IcX, IcFlag, IcUsers, IcWarn, IcInfo } from './icons';
 import { GS, MODES, ML, POLICY, chf, dateLabel, place, bestFit, isStaff, monthText, type Ev } from '@/lib/model';
 
 type Tab = 'inbox' | 'decided' | 'coverage' | 'suggestions';
 
 export default function Approvals() {
-  const { me, data, ev, people, presence, act, busy, open } = useApp();
+  const { me, data, ev, people, presence, act, busy, open, toast } = useApp();
   const [tab, setTab] = useState<Tab>('inbox');
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [exp, setExp] = useState<string | null>(null);
@@ -35,8 +36,14 @@ export default function Approvals() {
   const requesters = [...new Set(data.requests.filter(r => r.status === 'requested').map(r => r.personId))].map(id => people.get(id)).filter(Boolean);
 
   async function decide(ids: string[], status: 'approved' | 'declined', n: string) {
-    const r = await act<number>('request_decide', { p_ids: ids, p_status: status, p_note: n.trim() }, `${status === 'approved' ? 'Approved' : 'Declined'}: ${ids.length} request${ids.length > 1 ? 's' : ''}`);
-    if (r.ok) { setSel(new Set()); setNote(''); setDeclining(null); setExp(null); }
+    const r = await act<number>('request_decide', { p_ids: ids, p_status: status, p_note: n.trim() });
+    if (!r.ok) return;
+    const done = Number(r.data) || 0, verb = status === 'approved' ? 'Approved' : 'Declined';
+    // someone may have withdrawn or decided in the meantime: the database only changes requests that are still waiting
+    if (done === ids.length) toast(`${verb}: ${done} request${done > 1 ? 's' : ''}`);
+    else if (done === 0) toast('Nothing changed: it was withdrawn or decided in the meantime.', true);
+    else toast(`${verb} ${done} of ${ids.length}. The others were changed in the meantime.`, true);
+    setSel(new Set()); setNote(''); setDeclining(null); setExp(null);
   }
   const policyChip = (e: Ev) => e.past ? <span className="pill off">Already happened</span> : e.tk >= 4 ? <span className="pill red"><IcWarn s={12} />Needs exception</span> : e.tk ? <span className="pill ok"><IcCheck s={11} />Fits the policy</span> : <span className="pill off">Not rated</span>;
   const allSel = pending.length > 0 && pending.every(r => sel.has(r.id));
@@ -46,6 +53,7 @@ export default function Approvals() {
     <main className="page">
       <section className="head">
         <div><h1 className="title">Requests</h1><p className="lede">{ro ? 'Every request from sales to go to an external event, and what Roman decided.' : 'Every request from sales in one inbox. Check the row, then approve or decline. Click a row for the details.'}</p></div>
+        <div className="actions"><ReportMenu /></div>
       </section>
       <div className="kpis">
         <div className={`kpi ${pending.length ? 'red' : ''}`}><span>Waiting for a decision</span><b className="num">{data.requests.filter(r => r.status === 'requested').length}</b><small>requests</small></div>

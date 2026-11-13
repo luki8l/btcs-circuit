@@ -61,7 +61,7 @@ function EventPane() {
 }
 
 function Detail({ e }: { e: Ev }) {
-  const { me, people, presence, group, open, act, busy, data } = useApp();
+  const { me, people, presence, group, open, act, busy, data, toast } = useApp();
   const p = presence(e.id);
   const all = [...p.approved, ...p.requested];
   const mine = all.find(r => r.personId === me.id);
@@ -83,7 +83,7 @@ function Detail({ e }: { e: Ev }) {
                 <Av p={who} req={r.status === 'requested'} size="lg" />
                 <div><b>{who?.name || 'Former colleague'}{r.personId === me.id ? ' (you)' : ''}</b><small>{MODES[r.mode][0]}{who?.market ? ` · ${who.market}` : ''}</small></div>
                 {r.status === 'approved' ? <span className="pill ok"><i />Going</span> : staff
-                  ? <button className="btn ok sm" disabled={busy} onClick={() => act('request_decide', { p_ids: [r.id], p_status: 'approved', p_note: '' }, `Approved: ${who?.name}`)}><IcCheck s={12} />Approve</button>
+                  ? <button className="btn ok sm" disabled={busy} onClick={async () => { const x = await act<number>('request_decide', { p_ids: [r.id], p_status: 'approved', p_note: '' }); if (x.ok) toast(Number(x.data) ? `Approved: ${who?.name}` : 'Nothing changed: it was withdrawn or decided in the meantime.', !Number(x.data)); }}><IcCheck s={12} />Approve</button>
                   : <span className="pill wait"><i />Waiting</span>}
               </div>
             );

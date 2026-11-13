@@ -134,6 +134,10 @@ img { max-width: 100%; }
 @keyframes pop { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 .dd-opt { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border-radius: 6px; text-align: left; font-size: 14px; color: var(--ink); }
 .dd-opt:hover { background: var(--hover); }
+.dd-opt.dl { align-items: flex-start; padding: 10px; }
+.dd-opt.dl svg { margin-top: 2px; color: var(--ink-2); flex: none; }
+.dd-opt.dl b { display: block; font-weight: 600; }
+.dd-opt.dl small { display: block; color: var(--ink-3); font-size: 12.5px; line-height: 1.4; margin-top: 2px; }
 .dd-opt .n { margin-left: auto; color: var(--ink-3); font-size: 12.5px; font-variant-numeric: tabular-nums; }
 .dd-opt .radio { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(--line-3); flex: none; }
 .dd-opt .radio.on { border: 5px solid var(--ink); }

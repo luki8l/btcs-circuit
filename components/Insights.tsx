@@ -6,65 +6,43 @@ import { useMemo } from 'react';
 import { useApp, h } from './AppProvider';
 import { Tier, DateBlock, Av, Blank } from './ui';
 import Season from './Season';
+import ReportMenu from './ReportMenu';
 import { IcInfo, IcFlag, IcChart } from './icons';
-import { MS, ML, REGIONS, REGION_LABEL, chf, dateLabel, place, mIdx, canSeeInsights, isStaff } from '@/lib/model';
+import { MS, ML, REGION_LABEL, chf, dateLabel, place, mIdx, canSeeInsights, isStaff } from '@/lib/model';
+import { buildReport } from '@/lib/report';
 
 export default function Insights() {
   const { me, data, ev, events, people, presence, open, today } = useApp();
   const all = useMemo(() => new Set(events.map(e => e.id)), [events]);
   if (!canSeeInsights(me.role)) return <main className="page"><h1 className="title">Overview</h1><p className="muted" style={{ marginTop: 12 }}>The overview is for the events team and management.</p></main>;
-  const rs = data.requests.filter(r => r.status !== 'withdrawn' && ev.has(r.eventId));
-  const appr = rs.filter(r => r.status === 'approved');
-  const started = (id: number) => { const e = ev.get(id)!; return e.past || (!!e.sd && e.mode !== 'tbd' && e.sd <= today); };
-  const att = appr.filter(r => started(r.eventId));
-  const deb = att.filter(r => r.rating);
-  const leads = deb.reduce((a, r) => a + (r.leads || 0), 0);
-  const spendDeb = deb.reduce((a, r) => a + Number(r.cost || 0), 0);
-  const spend = appr.reduce((a, r) => a + Number(r.cost || 0), 0);
-  const up = events.filter(e => !e.past);
-  const key = up.filter(e => e.mode !== 'tbd' && (e.tk === 1 || e.tk === 2));
-  const keyCovered = key.filter(e => presence(e.id).approved.length);
-  const goingAhead = appr.filter(r => !started(r.eventId));
-  const waiting = rs.filter(r => r.status === 'requested').length;
-  const gaps = key.filter(e => !presence(e.id).approved.length && !presence(e.id).requested.length).sort((a, b) => +a.sd! - +b.sd!).slice(0, 8);
-
+  // the same numbers as the Excel and PDF report
+  const R = buildReport(data, events), K = R.kpi;
+  const up = events.filter(e => !e.past), waiting = K.waiting;
+  const gaps = R.gaps.slice(0, 8).map(g => g.e);
   const cur = mIdx(today);
   const dated = up.filter(e => e.sd && e.mode !== 'tbd');
   const m1 = Math.max(...dated.map(e => mIdx(e.sd!)));
   const cols: number[] = []; for (let m = cur; m <= m1; m++) cols.push(m);
   const inMonth = (m: number) => dated.filter(e => mIdx(e.sd!) === m);
   const maxc = Math.max(1, ...cols.map(m => inMonth(m).length));
-  const regs = REGIONS.filter(r => r !== 'Other').map(rg => { const u = up.filter(e => e.reg === rg && e.tk >= 1 && e.tk <= 3); return [rg, u.filter(e => presence(e.id).approved.length).length, u.length] as const; });
-  const results = att.slice().sort((a, b) => (b.leads ?? -1) - (a.leads ?? -1));
-  const held = deb.reduce((a, r) => a + (r.meetingsHeld || 0), 0);
-  // per sales team: who travels, what it costs, what comes back
-  const teamOf = (pid: string) => people.get(pid)?.team || 'No team';
-  const salesTeams = [...new Set([...data.people.filter(p => p.active && p.role === 'sales').map(p => p.team || 'No team'), ...rs.map(r => teamOf(r.personId))])];
-  const byTeam = salesTeams.map(t => {
-    const mine = rs.filter(r => teamOf(r.personId) === t), a = mine.filter(r => r.status === 'approved');
-    const done = a.filter(r => started(r.eventId)), dd = done.filter(r => r.rating);
-    return {
-      t, people: data.people.filter(p => p.active && p.role === 'sales' && (p.team || 'No team') === t).length,
-      ahead: a.filter(r => !started(r.eventId)).length, waiting: mine.filter(r => r.status === 'requested').length,
-      went: done.length, due: done.length - dd.length, leads: dd.reduce((x, r) => x + (r.leads || 0), 0),
-      rating: dd.length ? dd.reduce((x, r) => x + (r.rating || 0), 0) / dd.length : null, spend: a.reduce((x, r) => x + Number(r.cost || 0), 0),
-    };
-  }).sort((x, y) => y.leads - x.leads || y.ahead - x.ahead || x.t.localeCompare(y.t));
+  const regs = R.regions.map(x => [x.region, x.covered, x.total] as const);
+  const results = R.results.map(x => x.r);
+  const byTeam = R.teams;
 
   return (
     <main className="page">
       <section className="head">
         <div><h1 className="title">Overview</h1>
           <p className="lede">Where Bitcoin Suisse shows up in the 2026/27 season, what it costs and what comes back. Every number here updates as sales request, Roman approves and people debrief.</p></div>
-        <div className="actions"><Link className="btn line" href="/discover">All events</Link>{isStaff(me.role) && <Link className="btn dark" href="/approvals">Requests{waiting ? ` (${waiting})` : ''}</Link>}</div>
+        <div className="actions"><ReportMenu /><Link className="btn line" href="/discover">All events</Link>{isStaff(me.role) && <Link className="btn dark" href="/approvals">Requests{waiting ? ` (${waiting})` : ''}</Link>}</div>
       </section>
 
       <div className="kpis">
-        <div className="kpi"><span>Upcoming events</span><b className="num">{up.length}</b><small>of {events.length} in the list</small></div>
-        <div className={`kpi ${key.length && keyCovered.length / key.length < .5 ? 'red' : ''}`}><span>Key events covered</span><b className="num">{keyCovered.length}<span className="dim" style={{ fontSize: '.55em' }}> / {key.length}</span></b><small>Tier 1–2 with someone approved</small></div>
-        <div className="kpi"><span>Trips approved</span><b className="num">{goingAhead.length}</b><small>{waiting} waiting for Roman</small></div>
-        <div className="kpi"><span>Ticket budget approved</span><b className="num">{chf(spend)}</b><small>as entered by sales</small></div>
-        <div className="kpi"><span>Leads from events</span><b className="num">{leads}</b><small>{!deb.length ? 'after the first debriefs' : spendDeb > 0 && leads ? `${chf(spendDeb / leads)} ticket cost per lead` : `from ${deb.length} debrief${deb.length > 1 ? 's' : ''} · ${held} meetings`}</small></div>
+        <div className="kpi"><span>Upcoming events</span><b className="num">{K.upcoming}</b><small>of {K.total} in the list</small></div>
+        <div className={`kpi ${K.key && K.keyCovered / K.key < .5 ? 'red' : ''}`}><span>Key events covered</span><b className="num">{K.keyCovered}<span className="dim" style={{ fontSize: '.55em' }}> / {K.key}</span></b><small>Tier 1–2 with someone approved</small></div>
+        <div className="kpi"><span>Trips approved</span><b className="num">{K.ahead}</b><small>{waiting} waiting for Roman</small></div>
+        <div className="kpi"><span>Ticket budget approved</span><b className="num">{chf(K.budget)}</b><small>as entered by sales</small></div>
+        <div className="kpi"><span>Leads from events</span><b className="num">{K.leads}</b><small>{!K.debriefs ? 'after the first debriefs' : K.costPerLead != null ? `${chf(K.costPerLead)} ticket cost per lead` : `from ${K.debriefs} debrief${K.debriefs > 1 ? 's' : ''} · ${K.meetings} meetings`}</small></div>
       </div>
 
       <section className="panel" style={{ marginBottom: 14 }}>

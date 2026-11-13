@@ -49,6 +49,7 @@ const EVENTS: Step[] = [
   { path: '/discover', drawer: a => sample(a, 'detail'), el: ['.drawer'], title: 'Your tools on every event', text: 'At the bottom of each event page: flag it, send someone (after the event: log who was there) or edit the event.' },
   { path: '/catalogue', el: ['.tbl', '.head'], title: 'Catalogue', text: 'The masterlist as a table. Add, edit or archive events; tiers and fit live here.' },
   { path: '/insights', el: ['.kpis'], title: 'Overview', text: 'The same picture management sees: coverage, budget, leads and results per team and event.' },
+  { path: '/insights', el: ['.report-dl'], title: 'Reports', text: 'A two-page PDF for management, or all data as Excel: requests, decisions, results, trips, gaps and every event.' },
   DONE,
 ];
 
@@ -59,6 +60,7 @@ const MANAGEMENT: Step[] = [
   { path: '/insights', el: ['#gaps'], title: 'The gaps', text: 'Key events where nobody from us goes yet. “Flagged” means Roman has asked sales to cover it.' },
   { path: '/insights', el: ['#by-team'], title: 'By team', text: 'Trips, open debriefs, leads, rating and budget for each sales team.' },
   { path: '/insights', el: ['#results'], title: 'Results per event', text: 'Leads, meetings, rating and “go again” from the 60-second debriefs after each event. This replaces the yearly rating round in Excel.' },
+  { path: '/insights', el: ['.report-dl'], title: 'Take it with you', text: 'Download a two-page PDF report for a meeting, or everything as Excel to filter and sort yourself.' },
   { path: '/approvals', el: ['.tabs'], title: 'Requests', text: 'Every request and Roman’s decision, with his note. You see everything but don’t have to approve anything. The number on the tab shows what is waiting.' },
   { path: '/team', el: ['.matrix'], title: 'Who goes where', text: 'Everyone’s trips by month. Solid means approved, dashed means waiting.' },
   { path: '/discover', el: ['.toolbar'], title: 'All events', text: 'The full list, exactly as sales see it: search, filters, calendar and the year view.' },
