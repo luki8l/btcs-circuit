@@ -30,7 +30,7 @@ export default function MyEvents() {
         <DateBlock e={e} />
         <div style={{ minWidth: 0 }}>
           <button className="nm" onClick={() => open({ kind: 'event', id: e.id, view: 'detail' })}>{e.name}</button>{isNew(r, since) && <span className="tag red new">{r.status === 'approved' ? (r.createdBy !== me.id ? 'New: Roman added you' : e.past ? 'New: confirmed' : 'New: approved') : 'New: declined'}</span>}
-          <div className="sub">{place(e)} · {dateLabel(e)} · {MODES[r.mode][0]}{r.ticket === 'paid' ? ` · ${chf(r.cost)}` : ` · ${TICKETS[r.ticket][0].toLowerCase()}`}</div>
+          <div className="sub">{place(e)} · {dateLabel(e)} · {MODES[r.mode][0]}{r.ticket === 'paid' ? ` · ${chf(r.cost)}` : ` · ${r.ticket === 'have' ? 'own ticket' : 'free'}`}</div>
         </div>
         <div className="side"><Tier e={e} /><StatusPill r={r} past={started(r)} /></div>
         <div className="todo">

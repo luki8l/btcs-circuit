@@ -24,14 +24,18 @@ const sample = (a: App, view: 'detail' | 'request'): DrawerState => {
   return e ? { kind: 'event', id: e.id, view } : null;
 };
 const TAB = (n: number) => `.tabs [role=tab]:nth-child(${n})`;
+const VIEW = (n: number) => `.seg[aria-label="View"] button:nth-child(${n})`;   // 1 list, 2 calendar, 3 year
+const SWITCH: Step = { path: '/discover', click: VIEW(1), el: ['.seg[aria-label="View"]'], title: 'List, calendar or year', text: 'Switch here between three views of the same events: the list, a month calendar and the whole year at a glance. Filters and search work in all three.' };
+const CAL: Step = { path: '/discover', click: VIEW(2), el: ['.cal'], title: 'The calendar', text: 'Each bar is an event across its days, coloured by tier. Dots on a bar are colleagues: filled = approved, open = waiting. The legend on top explains every mark; events with only a month sit on the right.' };
 const DONE: Step = { el: ['.tour-btn'], title: 'That’s it', text: 'You can start this walkthrough again anytime with this button. Everything else explains itself on the way.' };
 
 const SALES: Step[] = [
   { title: 'Welcome to Circuit', text: 'All external events and conferences in one place. Find an event, ask for your spot, Roman approves it, and after the event you log your leads. One minute.' },
   { path: '/discover', el: ['.search'], title: 'Find an event', text: 'Type a name, a city, a country or an area like “Nordics” or “DACH”. Local names work too, for example “Wien”.' },
   { path: '/discover', el: ['.quick'], title: 'Quick filters', text: 'One click each: key events (Tier 1–2), events nobody from us covers yet, events in your country or area, and your own requests.' },
-  { path: '/discover', el: ['.toolbar .seg'], title: 'List, calendar or year', text: 'The same events as a list, as a month calendar or as the whole year at a glance.' },
-  { path: '/discover', el: ['.erow:not(.past)'], title: 'One event per row', text: 'Date, place, tier and who from Bitcoin Suisse is already going. Tier 1–2 are the key events. Click a row to see everything about it.' },
+  SWITCH,
+  CAL,
+  { path: '/discover', click: VIEW(1), el: ['.erow:not(.past)'], title: 'One event per row', text: 'Date, place, tier and who from Bitcoin Suisse is already going. Tier 1–2 are the key events. Click a row to see everything about it.' },
   { path: '/discover', drawer: a => sample(a, 'detail'), el: ['.drawer'], title: 'The event page', text: 'Who goes, what the tier means, who you meet there and the details from the masterlist. The red button at the bottom asks for your spot.' },
   { path: '/discover', drawer: a => sample(a, 'request'), el: ['.drawer'], title: 'Ask for your spot', text: 'How you go, the ticket, who you want to meet and a short why. Takes 20 seconds, and Roman sees it right away. (Nothing is sent in this walkthrough.)' },
   { path: '/my', el: ['.head'], title: 'My events', text: 'Roman’s decisions land here, marked “New”. Once approved: create the event in HubSpot and tick it off. After the event: assign the leads in HubSpot and do the 60-second debrief. Went somewhere without asking first? Open the past event and press “I was there”.' },
@@ -48,7 +52,9 @@ const EVENTS: Step[] = [
   { path: '/insights', el: ['.kpis'], title: 'Overview', text: 'Where Bitcoin Suisse shows up, what it costs and what comes back. Every number updates as sales request, you decide and people debrief.' },
   { path: '/insights', el: ['#by-team'], title: 'By team and person', text: 'Trips, open debriefs, leads, rating and budget for each sales team. Click a team to see its people, click a person to see their events.' },
   { path: '/insights', el: ['.report-dl'], title: 'Reports', text: 'A two-page PDF for a meeting, or all data as Excel to filter and sort.' },
-  { path: '/discover', drawer: a => sample(a, 'detail'), el: ['.drawer'], title: 'Your tools on every event', text: 'At the bottom of each event page: “We need someone here” flags it, “Send someone” books a person (after the event: log who was there), or edit the event.' },
+  SWITCH,
+  CAL,
+  { path: '/discover', click: VIEW(1), drawer: a => sample(a, 'detail'), el: ['.drawer'], title: 'Your tools on every event', text: 'At the bottom of each event page: “We need someone here” flags it, “Send someone” books a person (after the event: log who was there), or edit the event.' },
   { path: '/catalogue', el: ['.tbl', '.head'], title: 'Catalogue', text: 'The masterlist as a table. Add, edit or archive events; tiers and fit live here.' },
   DONE,
 ];
@@ -63,7 +69,9 @@ const MANAGEMENT: Step[] = [
   { path: '/insights', el: ['.report-dl'], title: 'Take it with you', text: 'Download a two-page PDF report for a meeting, or everything as Excel to filter and sort yourself.' },
   { path: '/approvals', el: ['.tabs'], title: 'Requests', text: 'Every request and Roman’s decision, with his note. You see everything but don’t have to approve anything. The number on the tab shows what is waiting.' },
   { path: '/team', el: ['.matrix'], title: 'Who goes where', text: 'Everyone’s trips by month. Solid means approved, dashed means waiting.' },
-  { path: '/discover', el: ['.toolbar'], title: 'All events', text: 'The full list, exactly as sales see it: search, filters, calendar and the year view.' },
+  { path: '/discover', click: VIEW(1), el: ['.toolbar'], title: 'All events', text: 'The full list, exactly as sales see it: search by name, city, country or area, and filter by tier, region and more.' },
+  SWITCH,
+  CAL,
   DONE,
 ];
 

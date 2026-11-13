@@ -3,14 +3,14 @@
 import { useMemo, useState } from 'react';
 import { useApp, h } from './AppProvider';
 import { Tier } from './ui';
-import { IcBack, IcNext } from './icons';
+import { IcBack, IcNext, IcFlag } from './icons';
 import { ML, dateLabel, place, mIdx, type Ev } from '@/lib/model';
 
 const DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 
 export default function Calendar({ events, month, setMonth, big, tools }: { events: Ev[]; month: number; setMonth: (m: number) => void; big?: boolean; tools?: React.ReactNode }) {
-  const { open, presence, today } = useApp();
+  const { open, presence, today, data } = useApp();
   const [openWeeks, setOpenWeeks] = useState<Set<number>>(new Set());
   const y = Math.floor(month / 12), m = month % 12;
   const first = new Date(y, m, 1), last = new Date(y, m + 1, 0);
@@ -47,6 +47,7 @@ export default function Calendar({ events, month, setMonth, big, tools }: { even
         <button className="btn sm" onClick={() => setMonth(mIdx(today))}>Today</button>
         {tools}
       </div>
+      <CalendarLegend flags={data.flags.length > 0} />
       <div className="cal-body">
         <div className="cal-grid">
           <div className="cal-dow">{DOW.map(d => <span key={d}>{d}</span>)}</div>
@@ -63,15 +64,15 @@ export default function Calendar({ events, month, setMonth, big, tools }: { even
                   const pr = presence(l.e.id);
                   return (
                     <button key={l.e.id} className={`cal-bar t${l.e.tk}`} style={{ gridColumn: `${l.s + 1} / ${l.t + 2}`, gridRow: l.lane + 2 }}
-                      data-tip={`<b>${h(l.e.name)}</b>${h(dateLabel(l.e))} · ${h(place(l.e))}<br>${l.e.tk ? 'Tier ' + l.e.tk : 'Unrated'}${pr.approved.length ? ` · ${pr.approved.length} going` : ''}`}
+                      data-tip={`<b>${h(l.e.name)}</b>${h(dateLabel(l.e))} · ${h(place(l.e))}<br>${l.e.tk ? 'Tier ' + l.e.tk : 'Unrated'}${pr.approved.length ? ` · ${pr.approved.length} going` : ''}${pr.requested.length ? ` · ${pr.requested.length} waiting` : ''}${pr.flagged ? ' · Roman wants someone' : ''}`}
                       onClick={() => open({ kind: 'event', id: l.e.id, view: 'detail' })}>
-                      <span>{l.e.name}</span>
+                      {pr.flagged && !pr.approved.length && <IcFlag s={12} className="fl" />}<span>{l.e.name}</span>
                       {(pr.approved.length + pr.requested.length) > 0 && <span className="who">{pr.approved.slice(0, 3).map(r => <i key={r.id} />)}{pr.requested.slice(0, 2).map(r => <i key={r.id} className="req" />)}</span>}
                     </button>
                   );
                 })}
                 {hiddenPerDay.map((n, di) => n > 0 && (
-                  <button key={'m' + di} className="cal-more" style={{ gridColumn: di + 1, gridRow: shown + 2 }} onClick={() => setOpenWeeks(s => new Set(s).add(wi))}>+{n} more</button>
+                  <button key={'m' + di} className="cal-more" style={{ gridColumn: di + 1, gridRow: shown + 2 }} onClick={() => setOpenWeeks(s => new Set(s).add(wi))}>+{n}<span className="more-t"> more</span></button>
                 ))}
                 {all && wk.nl > MAX && <button className="cal-more" style={{ gridColumn: 7, gridRow: shown + 2, textAlign: 'right' }} onClick={() => setOpenWeeks(s => { const n = new Set(s); n.delete(wi); return n; })}>less</button>}
               </div>
@@ -82,10 +83,29 @@ export default function Calendar({ events, month, setMonth, big, tools }: { even
           <h4>{ML[m]}, day not fixed yet</h4>
           {monthOnly.length ? monthOnly.sort((a, b) => a.tk - b.tk || a.name.localeCompare(b.name)).map(e => (
             <button key={e.id} className="side-ev" onClick={() => open({ kind: 'event', id: e.id, view: 'detail' })}>
-              <Tier e={e} /><span>{e.name}</span>{presence(e.id).approved.length > 0 && <i className="lg-ring" style={{ width: 10, height: 10 }} />}
+              <Tier e={e} /><span>{e.name}</span>{presence(e.id).approved.length > 0 ? <i className="lg-ring" style={{ width: 10, height: 10 }} /> : presence(e.id).flagged && <IcFlag s={12} className="fl" />}
             </button>
           )) : <p className="dim small">None.</p>}
         </aside>
+      </div>
+    </div>
+  );
+}
+
+/** what the marks in the calendar mean, drawn with the calendar's own styles */
+export function CalendarLegend({ flags = true }: { flags?: boolean }) {
+  return (
+    <div className="legend sl cal-lg" role="list" aria-label="Legend">
+      <div className="sl-g" role="listitem"><b>Tier</b>
+        <span><i className="cal-bar lg t1" />1 · Key event</span><span><i className="cal-bar lg t2" />2 · Important</span><span><i className="cal-bar lg t3" />3 · Worth going</span>
+        <span><i className="cal-bar lg t4" />4–5 · Low / skip</span><span><i className="cal-bar lg t0" />Not rated</span>
+      </div>
+      <div className="sl-g" role="listitem"><b>Bitcoin Suisse</b>
+        <span><i className="cal-dot" />Someone approved (one dot each)</span><span><i className="cal-dot req" />Request waiting</span>
+        {flags && <span><IcFlag s={12} className="fl" />Roman wants someone</span>}
+      </div>
+      <div className="sl-g" role="listitem"><b>Days</b>
+        <span><i className="cal-today">13</i>Today</span><span><i className="cal-side-ic" />Side list: month known, day not fixed yet</span>
       </div>
     </div>
   );
