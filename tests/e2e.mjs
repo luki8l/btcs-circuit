@@ -32,7 +32,7 @@ await p.click('.toolbar .seg >> text=List'); await p.waitForTimeout(200);
 await p.fill('input[aria-label="Search events"]', 'st. moritz'); await p.waitForTimeout(200);
 await p.click('.erow'); await p.waitForSelector('.drawer'); await p.waitForTimeout(300); await shot(p, '07-drawer');
 await p.click('.dr-f >> text=Request a spot'); await p.waitForTimeout(200);
-await p.click('.opt >> text=Paid'); await p.fill('#cost', '4800'); await p.fill('#why', 'Three UHNW prospects confirmed.');
+await p.click('.opt >> text=Paid'); await p.fill('#cost', '4800'); await p.click('#reqForm .chip >> nth=1'); await p.fill('#why', 'Three UHNW prospects confirmed.');
 await shot(p, '08-request');
 await p.click('button[form=reqForm]'); await p.waitForSelector('text=Request sent'); await shot(p, '09-sent');
 await p.click('text=Go to My events'); await p.waitForURL('**/my'); await p.waitForTimeout(400); await shot(p, '10-my', true);

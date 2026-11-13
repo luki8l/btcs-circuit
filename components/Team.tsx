@@ -17,8 +17,9 @@ export default function Team() {
   const byPerson = useMemo(() => {
     const m = new Map<string, Req[]>(); for (const r of reqs) { const a = m.get(r.personId) || []; a.push(r); m.set(r.personId, a); } return m;
   }, [reqs]);
-  const teams = [...new Set(data.people.map(p => p.team || '—'))].sort();
-  const list = data.people.filter(p => p.active && (!team || (p.team || '—') === team) && (!onlyBusy || (byPerson.get(p.id) || []).length))
+  const teams = [...new Set(data.people.filter(p => p.active && (p.role === 'sales' || byPerson.has(p.id))).map(p => p.team || '—'))].sort();
+  // sales always; colleagues from other teams (management, events) only when they travel themselves
+  const list = data.people.filter(p => p.active && (p.role === 'sales' || (byPerson.get(p.id) || []).length) && (!team || (p.team || '—') === team) && (!onlyBusy || (byPerson.get(p.id) || []).length))
     .sort((a, b) => (a.team || 'zz').localeCompare(b.team || 'zz') || a.name.localeCompare(b.name));
   const groups = new Map<string, typeof list>(); list.forEach(p => { const k = p.team || 'No team'; groups.set(k, [...(groups.get(k) || []), p]); });
   const cur = mIdx(today);

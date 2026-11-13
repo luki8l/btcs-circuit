@@ -23,7 +23,7 @@ export type Data = { me: Person & { email: string }; today: string; people: Pers
 
 export type Ev = RawEvent & {
   sd: Date | null; ed: Date | null; endCheck: Date | null; past: boolean; mk: string; tk: number;
-  group: 'digital' | 'tradfi' | 'other'; reg: string; hay: string;
+  group: 'digital' | 'tradfi' | 'other'; reg: string; hay: string; cn: string;
 };
 
 // ───────────────────────────── vocabulary ─────────────────────────────
@@ -65,6 +65,46 @@ export const ML = ['January', 'February', 'March', 'April', 'May', 'June', 'July
 export const isStaff = (r: Role) => r === 'admin' || r === 'events';
 export const canSeeInsights = (r: Role) => r !== 'sales';
 
+// ───────────────────────────── places ─────────────────────────────
+// The masterlist mixes 2- and 3-letter codes (SE and SWE, UAE, SGP, TK for Türkiye, FL for Liechtenstein…).
+// Everyone sees full country names; search also knows local names and the areas the teams think in.
+const CC: Record<string, string> = {
+  AR: 'Argentina', AT: 'Austria', BE: 'Belgium', BM: 'Bermuda', CA: 'Canada', CAN: 'Canada', CH: 'Switzerland', CZ: 'Czechia', DE: 'Germany',
+  'DE/AT': 'Germany / Austria', DK: 'Denmark', ES: 'Spain', FI: 'Finland', FIN: 'Finland', FL: 'Liechtenstein', LI: 'Liechtenstein', FR: 'France',
+  GB: 'United Kingdom', UK: 'United Kingdom', 'UNITED KINGDOM': 'United Kingdom', HK: 'Hong Kong', HR: 'Croatia', IE: 'Ireland', IN: 'India', IND: 'India',
+  IT: 'Italy', JP: 'Japan', JAP: 'Japan', KR: 'South Korea', SK: 'South Korea', LU: 'Luxembourg', MC: 'Monaco', MX: 'Mexico', MEX: 'Mexico',
+  NL: 'Netherlands', NO: 'Norway', NZ: 'New Zealand', PL: 'Poland', PT: 'Portugal', QA: 'Qatar', QAT: 'Qatar', RO: 'Romania', SA: 'Saudi Arabia',
+  SE: 'Sweden', SWE: 'Sweden', SG: 'Singapore', SGP: 'Singapore', SI: 'Slovenia', TH: 'Thailand', TR: 'Türkiye', TK: 'Türkiye',
+  AE: 'United Arab Emirates', UAE: 'United Arab Emirates', US: 'United States', USA: 'United States', ZA: 'South Africa', ZAF: 'South Africa',
+};
+/** full country name for a masterlist code ('' when unknown yet) */
+export const countryName = (c: string | null | undefined) => { const k = (c || '').trim(); if (!k || /^tba$/i.test(k)) return ''; return CC[k.toUpperCase()] || k; };
+// areas the sales teams work in (used for search words and the "In the Nordics" quick filter)
+export const AREAS: Record<string, string[]> = {
+  'the Nordics': ['Sweden', 'Norway', 'Finland', 'Denmark', 'Iceland'],
+  Benelux: ['Netherlands', 'Belgium', 'Luxembourg'],
+  DACH: ['Germany', 'Austria', 'Switzerland', 'Liechtenstein', 'Germany / Austria'],
+  'the Middle East': ['United Arab Emirates', 'Saudi Arabia', 'Qatar', 'Bahrain', 'Oman', 'Kuwait'],
+};
+export const areaOf = (country: string) => Object.keys(AREAS).find(a => AREAS[a].includes(country)) || '';
+// extra words people type: local names, short forms
+const ALIAS: Record<string, string> = {
+  Austria: 'österreich osterreich', Germany: 'deutschland', 'Germany / Austria': 'deutschland österreich austria germany', Switzerland: 'schweiz suisse svizzera',
+  Netherlands: 'holland nederland dutch', Belgium: 'belgië belgique belgien', Luxembourg: 'luxemburg', Sweden: 'sverige schweden', Norway: 'norge norwegen',
+  Finland: 'suomi finnland', Denmark: 'danmark dänemark', 'United Kingdom': 'uk england britain great britain gb', 'United States': 'usa us america',
+  'United Arab Emirates': 'uae emirates vae', Türkiye: 'turkey türkei turkiye', 'South Korea': 'korea', Spain: 'españa spanien', Italy: 'italia italien',
+  France: 'frankreich', Czechia: 'czech republic tschechien', Portugal: 'portugal', 'Saudi Arabia': 'ksa saudi', Croatia: 'kroatien hrvatska',
+  Liechtenstein: 'fl', 'Hong Kong': 'hk', Singapore: 'sg',
+};
+const CITY_ALIAS: [RegExp, string][] = [
+  [/vienna/i, 'wien'], [/zurich/i, 'zürich zuerich'], [/geneva/i, 'genf genève geneve'], [/munich/i, 'münchen muenchen'], [/lucerne/i, 'luzern'],
+  [/prague/i, 'prag praha'], [/milan/i, 'mailand milano'], [/lisbon/i, 'lissabon lisboa'], [/brussels/i, 'brüssel bruxelles'], [/cologne/i, 'köln'],
+  [/copenhagen/i, 'kopenhagen københavn'], [/rome/i, 'rom roma'], [/warsaw/i, 'warschau'], [/hague/i, 'den haag'], [/basel/i, 'bâle'], [/bern/i, 'berne'],
+];
+const fold = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+/** lower-case, accents removed: "Zürich" and "zurich" match */
+export const searchWords = (q: string) => fold(q).split(/\s+/).filter(Boolean);
+
 // ───────────────────────────── dates ─────────────────────────────
 export const pd = (s: string) => { const [y, m, d] = s.slice(0, 10).split('-').map(Number); return new Date(y, m - 1, d); };
 export const mIdx = (d: Date) => d.getFullYear() * 12 + d.getMonth();
@@ -83,13 +123,16 @@ export function kindOf(t: string | null): Ev['group'] {
 
 export function prep(e: RawEvent, today: Date): Ev {
   const sd = e.start ? pd(e.start) : null;
+  const cn = countryName(e.country), area = areaOf(cn);
   let ed = e.end ? pd(e.end) : sd;
   if (sd && ed && ed < sd) ed = sd;
   const endCheck = e.mode === 'tbd' || !sd ? null : e.mode === 'month' ? new Date(sd.getFullYear(), sd.getMonth() + 1, 0) : ed;
   return {
     ...e, sd, ed, endCheck, past: !!endCheck && endCheck < today, mk: e.mode === 'tbd' || !e.start ? 'TBD' : e.start.slice(0, 7),
     tk: e.tier || 0, group: kindOf(e.kind), reg: REGIONS.includes(e.region) ? e.region : 'Other',
-    hay: [e.name, e.city, e.country, e.region, e.kind, e.focus].join(' ').toLowerCase(),
+    hay: fold([e.name, e.city, e.country, cn, ALIAS[cn], area !== 'DACH' ? area : '', area === 'the Nordics' ? 'nordic scandinavia' : '', REGION_LABEL[e.region], e.kind, e.focus,
+      ...CITY_ALIAS.filter(([re]) => re.test(e.city || '')).map(([, a]) => a)].filter(Boolean).join(' ')),
+    cn,
   };
 }
 
@@ -101,7 +144,11 @@ export function dateLabel(e: Ev): string {
   if (s.getMonth() === t.getMonth() && s.getFullYear() === t.getFullYear()) return `${s.getDate()}–${t.getDate()} ${MS[s.getMonth()]} ${s.getFullYear()}`;
   return `${s.getDate()} ${MS[s.getMonth()]} – ${t.getDate()} ${MS[t.getMonth()]} ${t.getFullYear()}`;
 }
-export const place = (e: RawEvent) => [e.city, e.country && e.country !== 'TBA' && e.country !== e.city ? e.country : null].filter(Boolean).join(', ') || 'Location TBA';
+export const place = (e: RawEvent) => {
+  const c = countryName(e.country), city = e.city && !/^tba\b/i.test(e.city) ? e.city : '';
+  return [city, c && fold(c) !== fold(city) ? c : null].filter(Boolean).join(', ') || 'Location TBA';
+};
+export const monthText = (ym: string | null) => { if (!ym || !/^\d{4}-\d{2}/.test(ym)) return ym || ''; return `${MS[Number(ym.slice(5, 7)) - 1]} ${ym.slice(0, 4)}`; };
 export const chf = (n: number) => 'CHF ' + Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '’');
 export const bestFit = (e: RawEvent) => { const m = Math.max(...e.fit.map(v => v || 0)); return m ? `${GS.filter((_, i) => e.fit[i] === m).join(', ')} (${m}/5)` : 'not rated'; };
 
@@ -120,10 +167,10 @@ export function matches(e: Ev, f: Filters, p: PresenceInfo, skip?: keyof Filters
   if (skip !== 'when') { if (f.when === 'upcoming' && e.past) return false; if (f.when === 'past' && !e.past) return false; }
   if (skip !== 'from' && f.from && (e.mk === 'TBD' || e.mk < f.from)) return false;
   if (skip !== 'to' && f.to && (e.mk === 'TBD' || e.mk > f.to)) return false;
-  if (skip !== 'q' && f.q) { const qs = f.q.toLowerCase().split(/\s+/).filter(Boolean); if (!qs.every(q => e.hay.includes(q))) return false; }
+  if (skip !== 'q' && f.q) { const qs = searchWords(f.q); if (!qs.every(q => e.hay.includes(q))) return false; }
   if (skip !== 'tiers' && f.tiers.length && !f.tiers.includes(e.tk)) return false;
   if (skip !== 'regions' && f.regions.length && !f.regions.includes(e.reg)) return false;
-  if (skip !== 'countries' && f.countries.length && !f.countries.includes(e.country)) return false;
+  if (skip !== 'countries' && f.countries.length && !f.countries.includes(e.cn)) return false;
   if (skip !== 'kinds' && f.kinds.length && !f.kinds.includes(e.group)) return false;
   if (skip !== 'sizes' && f.sizes.length && !f.sizes.includes(sizeBucket(e.size))) return false;
   if (skip !== 'fitGroup' && f.fitGroup >= 0 && f.fitMin > 0 && !((e.fit[f.fitGroup] || 0) >= f.fitMin)) return false;

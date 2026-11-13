@@ -1,12 +1,16 @@
 'use client';
+import { useEffect, useState } from 'react';
 import { useApp } from './AppProvider';
 import Link from 'next/link';
 import { Tier, DateBlock, StatusPill, Confirm, Blank } from './ui';
 import { IcCheck, IcPlus, IcCal } from './icons';
-import { GS, MODES, TICKETS, ROLE_LABEL, chf, dateLabel, place, type Req } from '@/lib/model';
+import { GS, MODES, TICKETS, chf, dateLabel, place, monthText, type Req } from '@/lib/model';
 
 export default function MyEvents() {
-  const { me, data, ev, open, act, busy, group, setGroup, people, today } = useApp();
+  const { me, data, ev, open, act, busy, group, setGroup, people, today, seen, markSeen, isNew } = useApp();
+  // decisions since the last visit get a "New" tag for this visit; the badge in the top bar clears
+  const [since, setSince] = useState<string | undefined>(undefined);
+  useEffect(() => { if (seen !== undefined && since === undefined) { setSince(seen); markSeen(); } }, [seen, since, markSeen]);
   const mine = data.requests.filter(r => r.personId === me.id && r.status !== 'withdrawn');
   const byDate = (a: Req, b: Req) => (ev.get(a.eventId)?.sd?.getTime() ?? 9e15) - (ev.get(b.eventId)?.sd?.getTime() ?? 9e15);
   const started = (r: Req) => { const e = ev.get(r.eventId); return !!e && !!e.sd && e.mode !== 'tbd' && e.sd <= today; };
@@ -25,13 +29,13 @@ export default function MyEvents() {
       <article key={r.id} className="mine">
         <DateBlock e={e} />
         <div style={{ minWidth: 0 }}>
-          <button className="nm" onClick={() => open({ kind: 'event', id: e.id, view: 'detail' })}>{e.name}</button>
+          <button className="nm" onClick={() => open({ kind: 'event', id: e.id, view: 'detail' })}>{e.name}</button>{isNew(r, since) && <span className="tag red new">{r.status === 'approved' ? (r.createdBy !== me.id ? 'New: Roman added you' : e.past ? 'New: confirmed' : 'New: approved') : 'New: declined'}</span>}
           <div className="sub">{place(e)} · {dateLabel(e)} · {MODES[r.mode][0]}{r.ticket === 'paid' ? ` · ${chf(r.cost)}` : ` · ${TICKETS[r.ticket][0].toLowerCase()}`}</div>
         </div>
         <div className="side"><Tier e={e} /><StatusPill r={r} past={started(r)} /></div>
         <div className="todo">
           {r.decisionNote && <div className="todo-i"><span className="dim">{r.status === 'declined' ? 'Declined' : 'Note'}{by ? ` by ${by}` : ''}: “{r.decisionNote}”</span></div>}
-          {r.status === 'requested' && <div className="todo-i"><span className="dim">Waiting for the events team · {r.meetingsPlanned} meetings planned · {r.groups.map(g => GS[g]).join(', ')}</span>
+          {r.status === 'requested' && <div className="todo-i"><span className="dim">{e.past ? 'Visit logged. Roman confirms it, then you can debrief' : `Waiting for the events team · ${r.meetingsPlanned} meetings planned`} · {r.groups.map(g => GS[g]).join(', ')}</span>
             <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}><button className="btn sm line" onClick={() => open({ kind: 'event', id: e.id, view: 'edit-request', rid: r.id })}>Change</button>
               <Confirm label="Withdraw" sure="Yes, withdraw" disabled={busy} onYes={() => act('request_withdraw', { p_id: r.id }, 'Request withdrawn')} /></span></div>}
           {r.status === 'approved' && <>
@@ -77,7 +81,7 @@ export default function MyEvents() {
       {sec('Declined', '', dec)}
       {data.suggestions.filter(s => s.by === me.id).length > 0 && (
         <section className="sect"><h2 className="h2">Your suggestions</h2><div className="card">{data.suggestions.filter(s => s.by === me.id).map(s => (
-          <div key={s.id} className="mine" style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}><div><b>{s.name}</b><div className="sub">{[s.month, s.city].filter(Boolean).join(' · ') || 'No date yet'}</div></div>
+          <div key={s.id} className="mine" style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}><div><b>{s.name}</b><div className="sub">{[monthText(s.month), s.city].filter(Boolean).join(' · ') || 'No date yet'}</div></div>
             <span className={`pill ${s.status === 'added' ? 'ok' : s.status === 'pending' ? 'wait' : 'off'}`}>{s.status === 'added' ? 'In the calendar' : s.status === 'pending' ? 'Waiting' : 'Dismissed'}</span></div>))}</div></section>
       )}
     </main>

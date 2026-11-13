@@ -17,13 +17,18 @@ const NAV: Record<Role, string[]> = {
 const LABEL: Record<string, string> = { discover: 'Events', my: 'My events', approvals: 'Requests', team: 'Team', catalogue: 'Catalogue', insights: 'Overview', people: 'People' };
 
 export default function Shell({ children }: { children: React.ReactNode }) {
-  const { me, data, palette, setPalette } = useApp();
+  const { me, data, palette, setPalette, ev, today, isNew } = useApp();
   const path = usePathname();
   const [menu, setMenu] = useState(false);
   const waiting = data.requests.filter(r => r.status === 'requested').length;
   // management sees open requests; the events team also new event suggestions to review
   const pending = waiting + (me.role === 'management' ? 0 : data.suggestions.filter(s => s.status === 'pending').length);
-  const todo = data.requests.filter(r => r.personId === me.id && r.status === 'approved' && !r.rating).length;
+  // My events: steps left (HubSpot, debrief) plus decisions not seen yet
+  const started = (id: number) => { const e = ev.get(id); return !!e && !!e.sd && e.mode !== 'tbd' && e.sd <= today; };
+  const mine = data.requests.filter(r => r.personId === me.id);
+  const steps = mine.filter(r => r.status === 'approved' && !r.rating && (!r.hubspot || started(r.eventId))).length;
+  const unseen = mine.filter(r => isNew(r) && !(r.status === 'approved' && !r.rating && (!r.hubspot || started(r.eventId)))).length;
+  const todo = steps + unseen;
   useEffect(() => { if (!menu) return; const c = () => setMenu(false); setTimeout(() => document.addEventListener('click', c, { once: true }), 0); return () => document.removeEventListener('click', c); }, [menu]);
   async function signOut() { await fetch('/auth/signout', { method: 'POST' }); location.assign('/login'); }
   return (
@@ -34,7 +39,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           <nav className="nav" aria-label="Main">
             {NAV[me.role].map(k => (
               <Link key={k} href={`/${k}`} aria-current={path.startsWith(`/${k}`) ? 'page' : undefined}>
-                {LABEL[k]}{k === 'approvals' && pending > 0 && <span className="cnt" title={`${waiting} request${waiting === 1 ? '' : 's'} waiting for a decision`}>{pending}</span>}{k === 'my' && todo > 0 && <span className="cnt" title="Approved events with steps left">{todo}</span>}
+                {LABEL[k]}{k === 'approvals' && pending > 0 && <span className="cnt" title={`${waiting} request${waiting === 1 ? '' : 's'} waiting for a decision`}>{pending}</span>}{k === 'my' && todo > 0 && <span className="cnt" title={[steps ? `${steps} with steps left` : '', unseen ? `${unseen} new decision${unseen > 1 ? 's' : ''}` : ''].filter(Boolean).join(', ')}>{todo}</span>}
               </Link>
             ))}
           </nav>

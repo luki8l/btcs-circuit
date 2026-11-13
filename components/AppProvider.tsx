@@ -19,6 +19,10 @@ type Ctx = {
   toast: (m: string, bad?: boolean) => void;
   act: <T = unknown>(fn: string, args: Record<string, unknown>, ok?: string) => Promise<{ ok: boolean; data?: T; error?: string }>;
   busy: boolean; palette: boolean; setPalette: (b: boolean) => void;
+  /** when this person last opened My events (undefined until read in the browser) */
+  seen: string | undefined; markSeen: () => void;
+  /** a decision on my request that I have not seen yet */
+  isNew: (r: Req, since?: string) => boolean;
 };
 const C = createContext<Ctx | null>(null);
 export const useApp = () => { const c = useContext(C); if (!c) throw new Error('no app context'); return c; };
@@ -43,6 +47,13 @@ export default function AppProvider({ data, children }: { data: Data; children: 
   const [group, setGroupS] = useState(2);
   useEffect(() => { try { const g = Number(localStorage.getItem('circuit.group')); if (g >= 0 && g <= 4 && localStorage.getItem('circuit.group') !== null) setGroupS(g); } catch { /* storage off */ } }, []);
   const setGroup = (g: number) => { setGroupS(g); try { localStorage.setItem('circuit.group', String(g)); } catch { /* storage off */ } };
+
+  const seenKey = 'circuit.seen.' + data.me.id;
+  const [seen, setSeen] = useState<string | undefined>(undefined);
+  useEffect(() => { try { setSeen(localStorage.getItem(seenKey) || '1970-01-01'); } catch { /* storage off: nothing is "new" */ } }, [seenKey]);
+  const markSeen = useCallback(() => { const n = new Date().toISOString(); try { localStorage.setItem(seenKey, n); setSeen(n); } catch { /* storage off */ } }, [seenKey]);
+  const isNew = useCallback((r: Req, since = seen) => !!since && r.personId === data.me.id && !!r.decidedAt && r.decidedAt > since && r.decidedBy !== data.me.id
+    && (r.status === 'approved' || r.status === 'declined'), [seen, data.me.id]);
 
   const [drawer, setDrawer] = useState<DrawerState>(null);
   const open = useCallback((d: DrawerState) => {
@@ -98,7 +109,7 @@ export default function AppProvider({ data, children }: { data: Data; children: 
     return () => { document.removeEventListener('mouseover', over); document.removeEventListener('mousemove', move); document.removeEventListener('scroll', hide, true); };
   }, []);
 
-  const value: Ctx = { data, me: data.me, today, events, ev, people, active, flagged, presence, group, setGroup, drawer, open, close, toast, act, busy, palette, setPalette };
+  const value: Ctx = { data, me: data.me, today, events, ev, people, active, flagged, presence, group, setGroup, drawer, open, close, toast, act, busy, palette, setPalette, seen, markSeen, isNew };
   return (
     <C.Provider value={value}>
       {children}

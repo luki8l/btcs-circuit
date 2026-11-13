@@ -36,6 +36,20 @@ export default function Insights() {
   const maxc = Math.max(1, ...cols.map(m => inMonth(m).length));
   const regs = REGIONS.filter(r => r !== 'Other').map(rg => { const u = up.filter(e => e.reg === rg && e.tk >= 1 && e.tk <= 3); return [rg, u.filter(e => presence(e.id).approved.length).length, u.length] as const; });
   const results = att.slice().sort((a, b) => (b.leads ?? -1) - (a.leads ?? -1));
+  const held = deb.reduce((a, r) => a + (r.meetingsHeld || 0), 0);
+  // per sales team: who travels, what it costs, what comes back
+  const teamOf = (pid: string) => people.get(pid)?.team || 'No team';
+  const salesTeams = [...new Set([...data.people.filter(p => p.active && p.role === 'sales').map(p => p.team || 'No team'), ...rs.map(r => teamOf(r.personId))])];
+  const byTeam = salesTeams.map(t => {
+    const mine = rs.filter(r => teamOf(r.personId) === t), a = mine.filter(r => r.status === 'approved');
+    const done = a.filter(r => started(r.eventId)), dd = done.filter(r => r.rating);
+    return {
+      t, people: data.people.filter(p => p.active && p.role === 'sales' && (p.team || 'No team') === t).length,
+      ahead: a.filter(r => !started(r.eventId)).length, waiting: mine.filter(r => r.status === 'requested').length,
+      went: done.length, due: done.length - dd.length, leads: dd.reduce((x, r) => x + (r.leads || 0), 0),
+      rating: dd.length ? dd.reduce((x, r) => x + (r.rating || 0), 0) / dd.length : null, spend: a.reduce((x, r) => x + Number(r.cost || 0), 0),
+    };
+  }).sort((x, y) => y.leads - x.leads || y.ahead - x.ahead || x.t.localeCompare(y.t));
 
   return (
     <main className="page">
@@ -46,11 +60,11 @@ export default function Insights() {
       </section>
 
       <div className="kpis">
-        <div className="kpi"><span>Upcoming events</span><b className="num">{up.length}</b><small>of {events.length} in the masterlist</small></div>
+        <div className="kpi"><span>Upcoming events</span><b className="num">{up.length}</b><small>of {events.length} in the list</small></div>
         <div className={`kpi ${key.length && keyCovered.length / key.length < .5 ? 'red' : ''}`}><span>Key events covered</span><b className="num">{keyCovered.length}<span className="dim" style={{ fontSize: '.55em' }}> / {key.length}</span></b><small>Tier 1–2 with someone approved</small></div>
         <div className="kpi"><span>Trips approved</span><b className="num">{goingAhead.length}</b><small>{waiting} waiting for Roman</small></div>
         <div className="kpi"><span>Ticket budget approved</span><b className="num">{chf(spend)}</b><small>as entered by sales</small></div>
-        <div className="kpi"><span>Leads from events</span><b className="num">{leads}</b><small>{deb.length ? `${chf(spendDeb / Math.max(1, leads))} ticket cost per lead` : 'after the first debriefs'}</small></div>
+        <div className="kpi"><span>Leads from events</span><b className="num">{leads}</b><small>{!deb.length ? 'after the first debriefs' : spendDeb > 0 && leads ? `${chf(spendDeb / leads)} ticket cost per lead` : `from ${deb.length} debrief${deb.length > 1 ? 's' : ''} · ${held} meetings`}</small></div>
       </div>
 
       <section className="panel" style={{ marginBottom: 14 }}>
@@ -87,18 +101,38 @@ export default function Insights() {
       </div>
 
       <section className="sect">
-        <h2 className="h2">Results per event</h2><p className="lede">Leads, cost per lead and “would go again” from the 60-second debriefs. This replaces the yearly rating round for the 2028 tiers.</p>
+        <h2 className="h2">By team</h2><p className="lede">Trips, results and budget per sales team. Leads and ratings come from the debriefs.</p>
+        <div className="card scroll-x"><table className="tbl">
+          <thead><tr><th>Team</th><th className="r">Sales</th><th className="r">Trips ahead</th><th className="r">Waiting</th><th className="r">Events done</th><th className="r">Leads</th><th>Avg. rating</th><th className="r">Ticket budget</th></tr></thead>
+          <tbody>{byTeam.map(x => (
+            <tr key={x.t}>
+              <td><b>{x.t}</b></td>
+              <td className="r">{x.people || <span className="dim">–</span>}</td>
+              <td className="r">{x.ahead || <span className="dim">–</span>}</td>
+              <td className="r">{x.waiting || <span className="dim">–</span>}</td>
+              <td className="r">{x.went ? <>{x.went}{x.due > 0 && <span className="pill red" style={{ marginLeft: 8 }}>{x.due} debrief{x.due > 1 ? 's' : ''} due</span>}</> : <span className="dim">–</span>}</td>
+              <td className="r"><b>{x.leads || <span className="dim">–</span>}</b></td>
+              <td>{x.rating != null ? <span className="dots5" data-tip={`${x.rating.toFixed(1)} / 5`}>{'●'.repeat(Math.round(x.rating))}<em>{'●'.repeat(5 - Math.round(x.rating))}</em></span> : <span className="dim">–</span>}</td>
+              <td className="r">{x.spend ? chf(x.spend) : <span className="dim">–</span>}</td>
+            </tr>
+          ))}</tbody>
+        </table></div>
+      </section>
+
+      <section className="sect">
+        <h2 className="h2">Results per event</h2><p className="lede">Leads, meetings and “would go again” from the 60-second debriefs. This replaces the yearly rating round for the 2028 tiers.</p>
         <div className="card scroll-x">{results.length ? (
           <table className="tbl">
-            <thead><tr><th>Event</th><th>Tier</th><th>Who</th><th className="r">Ticket</th><th className="r">Leads</th><th className="r">Per lead</th><th>Rating</th><th>Again?</th></tr></thead>
+            <thead><tr><th>Event</th><th>Tier</th><th>Who</th><th className="r">Ticket</th><th className="r">Meetings</th><th className="r">Leads</th><th className="r">Per lead</th><th>Rating</th><th>Again?</th></tr></thead>
             <tbody>{results.map(r => {
-              const e = ev.get(r.eventId)!, cpl = r.rating && r.leads ? Number(r.cost || 0) / r.leads : null;
+              const e = ev.get(r.eventId)!, cpl = r.rating && r.leads && Number(r.cost) > 0 ? Number(r.cost) / r.leads : null;
               return (
                 <tr key={r.id} className="click" onClick={() => open({ kind: 'event', id: e.id, view: 'detail' })}>
-                  <td><div className="ev"><DateBlock e={e} /><div><b>{e.name}</b><span>{dateLabel(e)}</span></div></div></td>
+                  <td><div className="ev"><DateBlock e={e} /><div><b>{e.name}</b><span>{place(e)}</span></div></div></td>
                   <td><Tier e={e} /></td>
                   <td><div style={{ display: 'flex', gap: 8, alignItems: 'center' }}><Av p={people.get(r.personId)} size="sm" /><span className="nowrap">{people.get(r.personId)?.name}</span></div></td>
-                  <td className="r">{r.cost ? chf(r.cost) : <span className="dim">free</span>}</td>
+                  <td className="r">{r.cost ? chf(r.cost) : <span className="dim">{r.ticket === 'have' ? 'had one' : 'free'}</span>}</td>
+                  <td className="r">{r.rating ? (r.meetingsHeld ?? '–') : <span className="dim">–</span>}</td>
                   <td className="r">{r.rating ? <b>{r.leads}</b> : <span className="pill red">debrief due</span>}</td>
                   <td className="r">{cpl != null ? chf(cpl) : <span className="dim">–</span>}</td>
                   <td>{r.rating ? <span className="dots5">{'●'.repeat(r.rating)}<em>{'●'.repeat(5 - r.rating)}</em></span> : null}</td>

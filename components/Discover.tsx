@@ -6,12 +6,11 @@ import Calendar from './Calendar';
 import { Tier, DateBlock, Av, Dropdown, Blank } from './ui';
 import { IcSearch, IcX, IcExpand, IcCollapse, IcDots, IcGrid, IcList, IcPlus, IcFlag, IcCheck } from './icons';
 import {
-  NO_FILTERS, GROUPS, GS, REGIONS, REGION_LABEL, KINDS, SIZES, ML, POLICY, matches, filtersToQuery, queryToFilters, sizeBucket, mIdx, monthKey, monthLabel, keyToIdx, dateLabel, place, isStaff,
+  NO_FILTERS, GROUPS, GS, REGIONS, REGION_LABEL, KINDS, SIZES, ML, POLICY, AREAS, areaOf, matches, filtersToQuery, queryToFilters, sizeBucket, mIdx, monthKey, monthLabel, keyToIdx, dateLabel, place, isStaff,
   type Ev, type Filters, type Presence,
 } from '@/lib/model';
 
 type View = 'list' | 'calendar' | 'year';
-const MARKET_CC: Record<string, string[]> = { Austria: ['AT'], Germany: ['DE'], Liechtenstein: ['FL', 'LI'], Netherlands: ['NL'], Portugal: ['PT'], Sweden: ['SE', 'SWE'], Switzerland: ['CH'], Spain: ['ES'], France: ['FR'], 'United Kingdom': ['UK'], Italy: ['IT'], Finland: ['FIN'], Denmark: ['DK'], Norway: ['NO'] };
 const PRES: Record<Presence, string> = { going: 'Someone is going', requested: 'Waiting for approval', open: 'Nobody from us yet', flagged: 'Roman wants someone there', mine: 'My requests' };
 
 export default function Discover() {
@@ -53,7 +52,7 @@ export default function Discover() {
     return c;
   };
   const fc = useMemo(() => ({
-    tiers: facet('tiers', e => e.tk), regions: facet('regions', e => e.reg), kinds: facet('kinds', e => e.group), sizes: facet('sizes', e => sizeBucket(e.size)), countries: facet('countries', e => e.country),
+    tiers: facet('tiers', e => e.tk), regions: facet('regions', e => e.reg), kinds: facet('kinds', e => e.group), sizes: facet('sizes', e => sizeBucket(e.size)), countries: facet('countries', e => e.cn),
   }), [events, f, presence]); // eslint-disable-line react-hooks/exhaustive-deps
   const presCount = useMemo(() => {
     const out: Record<Presence, number> = { going: 0, requested: 0, open: 0, flagged: 0, mine: 0 };
@@ -79,14 +78,17 @@ export default function Discover() {
     ['Everything', { when: 'all', from: '', to: '' }],
   ];
   const whenNow = WHEN.find(([, w]) => w.when === f.when && w.from === f.from && w.to === f.to)?.[0] || `${f.from ? monthLabel(keyToIdx(f.from)) : 'Start'} – ${f.to ? monthLabel(keyToIdx(f.to)) : 'end'}`;
-  const myCC = MARKET_CC[me.market] || [];
+  // "In Austria", "In the Nordics": the person's market and the area of their team, only when there are events there
+  const upIn = (cs: string[]) => events.some(e => !e.past && cs.includes(e.cn));
+  const myArea = AREAS[me.team] ? me.team : AREAS['the ' + me.team] ? 'the ' + me.team : areaOf(me.market);
   const quick: [string, Filters, boolean][] = [
     ['All upcoming', NO_FILTERS, true],
     ['Key events (Tier 1–2)', { ...NO_FILTERS, tiers: [1, 2] }, true],
     ['Nobody from us yet', { ...NO_FILTERS, tiers: [1, 2, 3], presence: ['open'] }, true],
     ['Roman wants someone', { ...NO_FILTERS, presence: ['flagged'] }, data.flags.length > 0],
     [`Good fit for ${GS[group]}`, { ...NO_FILTERS, fitGroup: group, fitMin: 4 }, true],
-    [`In ${me.market}`, { ...NO_FILTERS, countries: myCC }, myCC.length > 0],
+    [`In ${me.market}`, { ...NO_FILTERS, countries: [me.market] }, !!me.market && upIn([me.market])],
+    [`In ${myArea}`, { ...NO_FILTERS, countries: AREAS[myArea] || [] }, !!myArea && upIn(AREAS[myArea] || [])],
     ['My requests', { ...NO_FILTERS, when: 'all', presence: ['mine'] }, data.requests.some(r => r.personId === me.id)],
   ];
   const same = (a: Filters, b: Filters) => filtersToQuery(a) === filtersToQuery(b);
@@ -97,7 +99,8 @@ export default function Discover() {
     if (f.q) chips.push([`“${f.q}”`, () => setF({ ...f, q: '' })]);
     f.tiers.forEach(t => chips.push([t ? `Tier ${t}` : 'Not rated', () => toggle('tiers', t)]));
     f.regions.forEach(r => chips.push([REGION_LABEL[r], () => toggle('regions', r)]));
-    f.countries.forEach(c => chips.push([c, () => toggle('countries', c)]));
+    if (f.countries.length > 2) { const a = Object.keys(AREAS).find(k => AREAS[k].length === f.countries.length && AREAS[k].every(c => f.countries.includes(c))); if (a) chips.push([`In ${a}`, () => setF({ ...f, countries: [] })]); else f.countries.forEach(c => chips.push([c, () => toggle('countries', c)])); }
+    else f.countries.forEach(c => chips.push([c, () => toggle('countries', c)]));
     f.kinds.forEach(k => chips.push([KINDS[k], () => toggle('kinds', k)]));
     f.sizes.forEach(s => chips.push([`Size ${s}`, () => toggle('sizes', s)]));
     f.presence.forEach(p => chips.push([PRES[p], () => toggle('presence', p)]));
@@ -116,7 +119,7 @@ export default function Discover() {
   }, [events, hit, sort, group]);
   // the calendar ignores “upcoming / past”: a month shows all its days
   const calEvents = useMemo(() => events.filter(e => matches(e, { ...f, from: '', to: '' }, presence(e.id), 'when')), [events, f, presence]);
-  const countries = [...fc.countries.entries()].filter(([c]) => c && c !== 'TBA').sort((a, b) => b[1] - a[1]).slice(0, 16);
+  const countries = [...fc.countries.entries()].filter(([c]) => c).sort((a, b) => b[1] - a[1]).slice(0, 18);
   const up = events.filter(e => !e.past);
 
   const viewSwitch = (
@@ -162,7 +165,7 @@ export default function Discover() {
       )}
 
       <div className="toolbar">
-        <label className="search"><IcSearch /><input className="input" type="search" placeholder="Search by name, city or country" value={f.q} onChange={e => setF({ ...f, q: e.target.value })} aria-label="Search events" /></label>
+        <label className="search"><IcSearch /><input className="input" type="search" placeholder="Event, city, country or area" value={f.q} onChange={e => setF({ ...f, q: e.target.value })} aria-label="Search events" /></label>
         <Dropdown label="When" value={whenNow} active={whenNow !== 'All upcoming'}>{close => <>
           {WHEN.map(([l, w]) => <button key={l} className="dd-opt" onClick={() => { setF({ ...f, ...w }); close(); }}><span className={`radio ${whenNow === l ? 'on' : ''}`} />{l}</button>)}
         </>}</Dropdown>
@@ -232,8 +235,8 @@ function List({ list, grouped, reset }: { list: Ev[]; grouped: boolean; reset: (
         <div className="presence">{all.length ? <><span className="avs">{all.slice(0, 4).map(r => <Av key={r.id} p={people.get(r.personId)} req={r.status === 'requested'} size="sm" />)}</span>{p.approved.length ? `${p.approved.length} going` : ''}{p.approved.length && p.requested.length ? ' · ' : ''}{p.requested.length ? `${p.requested.length} waiting` : ''}</>
           : p.flagged ? <span className="flag"><IcFlag s={13} />Roman wants someone</span> : 'Nobody from us yet'}</div>
         <div className="act" onClick={x => x.stopPropagation()}>
-          {mine ? <span className={`pill ${mine.status === 'approved' ? 'ok' : 'wait'}`}><i />{mine.status === 'approved' ? 'You’re going' : 'Requested'}</span>
-            : e.past ? <span className="dim small">Over</span>
+          {mine ? <span className={`pill ${mine.status === 'approved' ? 'ok' : 'wait'}`}><i />{mine.status === 'approved' ? (e.past ? 'You were there' : 'You’re going') : e.past ? 'Logged' : 'Requested'}</span>
+            : e.past ? <button className="btn ghost sm" onClick={() => open({ kind: 'event', id: e.id, view: 'request' })} data-tip="Went there without a request? Log it for the debrief.">I was there</button>
               : <button className="btn soft sm" onClick={() => open({ kind: 'event', id: e.id, view: 'request' })}>Request a spot</button>}
         </div>
       </div>

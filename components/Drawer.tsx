@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from './AppProvider';
 import { Tier, Av } from './ui';
 import { IcX, IcBack, IcCal, IcPin, IcExt, IcFlag, IcWarn, IcCheck, IcUsers, IcEdit } from './icons';
-import { GROUPS, GS, MODES, TICKETS, POLICY, REGIONS, REGION_LABEL, SIZES, dateLabel, place, isStaff, chf, ymd, type Ev, type Mode, type Ticket, type Req } from '@/lib/model';
+import { GROUPS, GS, MODES, TICKETS, POLICY, REGIONS, REGION_LABEL, SIZES, dateLabel, place, isStaff, chf, ymd, countryName, type Ev, type Mode, type Ticket, type Req } from '@/lib/model';
 
 export default function Drawer() {
   const { drawer, close } = useApp();
@@ -136,7 +136,7 @@ function Detail({ e }: { e: Ev }) {
             <div className="lab"><span>For the events team</span></div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button className="btn line sm" disabled={busy} onClick={() => act('flag_set', { p_event: e.id, p_on: !flag, p_note: '' }, flag ? 'Flag removed' : 'Flagged: sales see “Roman wants someone”')}><IcFlag s={14} />{flag ? 'Remove flag' : 'We need someone here'}</button>
-              <button className="btn line sm" onClick={() => open({ kind: 'event', id: e.id, view: 'assign' })}><IcUsers s={14} />Send someone</button>
+              <button className="btn line sm" onClick={() => open({ kind: 'event', id: e.id, view: 'assign' })}><IcUsers s={14} />{e.past ? 'Log who was there' : 'Send someone'}</button>
               <button className="btn line sm" onClick={() => open({ kind: 'edit', id: e.id })}><IcEdit s={14} />Edit event</button>
             </div>
           </section>
@@ -144,27 +144,30 @@ function Detail({ e }: { e: Ev }) {
       </div>
       <footer className="dr-f">
         {mine ? <>
-          <span className="hint">{mine.status === 'approved' ? <><b>You’re going.</b> Approved.</> : <><b>Requested.</b> Waiting for Roman.</>}</span>
+          <span className="hint">{mine.status === 'approved' ? (e.past ? <><b>You were there.</b> Confirmed.</> : <><b>You’re going.</b> Approved.</>) : <><b>{e.past ? 'Logged.' : 'Requested.'}</b> Waiting for Roman.</>}</span>
           {mine.status === 'requested' && <button className="btn line" onClick={() => open({ kind: 'event', id: e.id, view: 'edit-request', rid: mine.id })}>Change</button>}
           <Link className="btn" href="/my">My events</Link>
-        </> : e.past ? <span className="hint">This event is over.</span>
-          : <button className="btn red lg" data-autofocus onClick={() => open({ kind: 'event', id: e.id, view: 'request' })}>Request a spot</button>}
+        </> : e.past ? <>
+          <span className="hint"><b>This event is over.</b> Were you there? Log it, Roman confirms, then you add your leads.</span>
+          <button className="btn red" data-autofocus onClick={() => open({ kind: 'event', id: e.id, view: 'request' })}>I was there</button>
+        </> : <button className="btn red lg" data-autofocus onClick={() => open({ kind: 'event', id: e.id, view: 'request' })}>Request a spot</button>}
       </footer>
     </>
   );
 }
 
 function RequestForm({ e, rid }: { e: Ev; rid?: string }) {
-  const { me, people, presence, group, open, act, busy, data, events, flagged } = useApp();
+  const { me, people, presence, open, act, busy, data, events, flagged } = useApp();
   const existing = rid ? data.requests.find(r => r.id === rid) : undefined;
   const [mode, setMode] = useState<Mode>(existing?.mode || (e.tk && e.tk <= 2 ? 'speak' : 'attend'));
   const [ticket, setTicket] = useState<Ticket>(existing?.ticket || 'free');
   const [cost, setCost] = useState(existing?.cost ? String(existing.cost) : '');
-  const [groups, setGroups] = useState<number[]>(existing?.groups || [group]);
+  const [groups, setGroups] = useState<number[]>(existing?.groups || []);
+  const past = e.past;
   const [meet, setMeet] = useState(existing?.meetingsPlanned ?? 4);
   const [why, setWhy] = useState(existing?.reason || '');
   const [err, setErr] = useState('');
-  const strict = e.tk >= 4;
+  const strict = e.tk >= 4 && !e.past;
   const p = presence(e.id);
   const others = [...p.approved, ...p.requested].filter(r => r.personId !== me.id);
   const overlaps = useMemo(() => {
@@ -173,16 +176,17 @@ function RequestForm({ e, rid }: { e: Ev; rid?: string }) {
       .map(r => events.find(x => x.id === r.eventId)).filter((o): o is Ev => !!o && o.mode === 'exact' && !!o.sd && o.sd <= e.ed! && o.ed! >= e.sd!);
   }, [data.requests, events, e, me.id]);
   const hints: [string, string][] = [];
-  if (strict) hints.push(['warn', `Tier ${e.tk}: the policy says don’t go. Add a reason so the events team can make an exception.`]);
+  if (past) hints.push(['', 'Roman confirms that you were there. Then it shows up in My events for the 60-second debrief with your leads.']);
+  else if (strict) hints.push(['warn', `Tier ${e.tk}: the policy says don’t go. Add a reason so the events team can make an exception.`]);
   else if (e.tk) hints.push(['good', `Fits the policy for Tier ${e.tk}: ${POLICY[e.tk][0].toLowerCase()}.`]);
   if (others.length) hints.push(['', `${others.length} colleague${others.length > 1 ? 's' : ''} already on it: ${others.map(r => people.get(r.personId)?.name).filter(Boolean).join(', ')}. Agree who covers which clients.`]);
-  overlaps.forEach(o => hints.push(['warn', `Overlaps with ${o.name} (${dateLabel(o)}), which you also requested.`]));
+  if (!past) overlaps.forEach(o => hints.push(['warn', `Overlaps with ${o.name} (${dateLabel(o)}), which you also requested.`]));
   if (flagged.has(e.id)) hints.push(['good', 'The events team flagged this event. They want someone there.']);
   async function submit(ev: React.FormEvent) {
     ev.preventDefault();
     if (strict && why.trim().length < 5) { setErr('Tier 4–5 events need a short reason.'); return; }
     if (!groups.length) { setErr('Pick at least one target group.'); return; }
-    const args = { p_mode: mode, p_ticket: ticket, p_cost: ticket === 'paid' ? Math.max(0, Number(cost) || 0) : 0, p_groups: groups, p_meetings: meet, p_reason: why.trim() };
+    const args = { p_mode: mode, p_ticket: ticket, p_cost: ticket === 'paid' ? Math.max(0, Number(cost) || 0) : 0, p_groups: groups, p_meetings: past ? 0 : meet, p_reason: why.trim() };
     const r = existing ? await act('request_edit', { p_id: existing.id, ...args }, 'Request updated') : await act('request_create', { p_event: e.id, ...args });
     if (r.ok) open(existing ? { kind: 'event', id: e.id, view: 'detail' } : { kind: 'event', id: e.id, view: 'sent' }); else setErr(r.error || '');
   }
@@ -190,28 +194,41 @@ function RequestForm({ e, rid }: { e: Ev; rid?: string }) {
     <>
       <Head e={e} back={() => open({ kind: 'event', id: e.id, view: 'detail' })} />
       <form className="dr-b" id="reqForm" onSubmit={submit} noValidate>
-        <div className="q"><span className="ql"><span className="no">1</span>How do you go?</span>
+        {past && <p className="note" style={{ paddingTop: 16 }}><b>Log your visit.</b> For events you went to without a request here. Takes 20 seconds.</p>}
+        <div className="q"><span className="ql"><span className="no">1</span>{past ? 'How did you go?' : 'How do you go?'}</span>
           <div className="opts">{(Object.keys(MODES) as Mode[]).map(k => <button type="button" key={k} className="opt" aria-pressed={mode === k} onClick={() => setMode(k)}><b>{MODES[k][0]}</b><span>{MODES[k][1]}</span></button>)}</div></div>
         <div className="q"><span className="ql"><span className="no">2</span>Ticket</span>
           <div className="opts">{(Object.keys(TICKETS) as Ticket[]).map(k => <button type="button" key={k} className="opt" aria-pressed={ticket === k} onClick={() => setTicket(k)}><b>{TICKETS[k][0]}</b><span>{TICKETS[k][1]}</span></button>)}</div>
           {ticket === 'paid' && <div className="field" style={{ marginTop: 12 }}><label htmlFor="cost">Estimated cost (CHF)</label><input id="cost" className="input" type="number" min={0} step={50} inputMode="numeric" value={cost} onChange={x => setCost(x.target.value)} placeholder="e.g. 1500" /><span className="dim small">Masterlist: {e.costTicket || 'no price noted'}</span></div>}
         </div>
-        <div className="q"><span className="ql"><span className="no">3</span>Who do you want to meet?</span>
+        <div className="q"><span className="ql"><span className="no">3</span>{past ? 'Who did you meet?' : 'Who do you want to meet?'}<span className="qh">pick one or more</span></span>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{GROUPS.map((n, i) => <button type="button" key={n} className="chip" aria-pressed={groups.includes(i)} onClick={() => setGroups(g => g.includes(i) ? g.filter(x => x !== i) : [...g, i].sort())}>{n}<span className="n">{e.fit[i] ?? '–'}</span></button>)}</div></div>
-        <div className="q"><span className="ql"><span className="no">4</span>Meetings you plan</span>
-          <div className="stepper"><button type="button" onClick={() => setMeet(m => Math.max(0, m - 1))} aria-label="Fewer">−</button><output>{meet}</output><button type="button" onClick={() => setMeet(m => Math.min(500, m + 1))} aria-label="More">+</button></div></div>
-        <div className="q"><label className="ql" htmlFor="why"><span className="no">5</span>Why this event?<span className="qh">{strict ? 'needed for Tier 4–5' : 'optional'}</span></label>
+        {!past && <div className="q"><span className="ql"><span className="no">4</span>Meetings you plan</span>
+          <div className="stepper"><button type="button" onClick={() => setMeet(m => Math.max(0, m - 1))} aria-label="Fewer">−</button><output>{meet}</output><button type="button" onClick={() => setMeet(m => Math.min(500, m + 1))} aria-label="More">+</button></div></div>}
+        <div className="q"><label className="ql" htmlFor="why"><span className="no">{past ? 4 : 5}</span>{past ? 'Anything Roman should know?' : 'Why this event?'}<span className="qh">{strict ? 'needed for Tier 4–5' : 'optional'}</span></label>
           <textarea id="why" className="area" value={why} onChange={x => setWhy(x.target.value)} placeholder="Pre-booked meetings, clients attending, a speaking slot…" maxLength={2000} />
           {err && <p className="err" style={{ marginTop: 8 }}>{err}</p>}</div>
         {hints.length > 0 && <div className="q"><span className="ql">Good to know</span><div className="hints">{hints.map((h, i) => <div key={i} className={`hint-i ${h[0]}`}>{h[0] === 'warn' ? <IcWarn /> : h[0] === 'good' ? <IcCheck /> : <IcUsers />}<span>{h[1]}</span></div>)}</div></div>}
       </form>
-      <footer className="dr-f"><button type="submit" form="reqForm" className="btn red lg" disabled={busy} data-autofocus>{busy ? 'Sending…' : existing ? 'Save changes' : 'Send request to Roman'}</button></footer>
+      <footer className="dr-f"><button type="submit" form="reqForm" className="btn red lg" disabled={busy} data-autofocus>{busy ? 'Sending…' : existing ? 'Save changes' : past ? 'Send to Roman to confirm' : 'Send request to Roman'}</button></footer>
     </>
   );
 }
 
 function Sent({ e }: { e: Ev }) {
   const { close } = useApp();
+  if (e.past) return (
+    <>
+      <Head e={e} />
+      <div className="dr-b">
+        <div className="done-box">
+          <div className="tick"><IcCheck s={28} /></div>
+          <div><h3 className="h2">Visit logged</h3><p className="muted" style={{ marginTop: 6 }}>Roman confirms it. Then it shows up in My events: assign your leads in HubSpot and do the 60-second debrief.</p></div>
+        </div>
+      </div>
+      <footer className="dr-f"><button className="btn" onClick={close}>Close</button><Link className="btn white lg" href="/my" onClick={close} data-autofocus>Go to My events</Link></footer>
+    </>
+  );
   return (
     <>
       <Head e={e} />
@@ -285,13 +302,13 @@ function Assign({ e }: { e: Ev }) {
     <>
       <Head e={e} back={() => open({ kind: 'event', id: e.id, view: 'detail' })} />
       <form className="dr-b" id="asgForm" onSubmit={submit}>
-        <p className="note" style={{ paddingTop: 16 }}>Send someone directly. It’s approved right away and shows up in their My events with the HubSpot steps.</p>
+        <p className="note" style={{ paddingTop: 16 }}>{e.past ? 'Log who was there. It’s confirmed right away and shows up in their My events for the 60-second debrief.' : 'Send someone directly. It’s approved right away and shows up in their My events with the HubSpot steps.'}</p>
         <div className="q"><div className="field"><label htmlFor="who">Who</label>
           <select id="who" className="select" value={who} onChange={x => setWho(x.target.value)} data-autofocus>{choices.map(p => <option key={p.id} value={p.id}>{p.name}{p.market ? ` · ${p.market}` : ''}</option>)}</select></div></div>
         <div className="q"><span className="ql">How</span><div className="opts">{(Object.keys(MODES) as Mode[]).map(k => <button type="button" key={k} className="opt" aria-pressed={mode === k} onClick={() => setMode(k)}><b>{MODES[k][0]}</b></button>)}</div></div>
         <div className="q"><div className="field"><label htmlFor="anote">Note for them</label><input id="anote" className="input" value={note} onChange={x => setNote(x.target.value)} placeholder="e.g. panel slot confirmed, ticket via marketing" maxLength={1000} /></div></div>
       </form>
-      <footer className="dr-f"><button type="submit" form="asgForm" className="btn red lg" disabled={busy || !who}>Send and approve</button></footer>
+      <footer className="dr-f"><button type="submit" form="asgForm" className="btn red lg" disabled={busy || !who}>{e.past ? 'Log and confirm' : 'Send and approve'}</button></footer>
     </>
   );
 }
@@ -354,7 +371,7 @@ function Editor({ id }: { id: number | null }) {
         </div>
         <div className="q"><div className="row3">
           <div className="field"><label htmlFor="ec">City</label><input id="ec" className="input" value={f.city} onChange={set('city')} maxLength={120} /></div>
-          <div className="field"><label htmlFor="eco">Country</label><input id="eco" className="input" value={f.country} onChange={set('country')} placeholder="CH, UK, UAE…" maxLength={40} /></div>
+          <div className="field"><label htmlFor="eco">Country</label><input id="eco" className="input" value={f.country} onChange={set('country')} placeholder="CH, UK, AT…" maxLength={40} />{f.country.trim() && <span className="dim small">Shown as: {countryName(f.country) || '–'}</span>}</div>
           <div className="field"><label htmlFor="er">Region</label><select id="er" className="select" value={f.region} onChange={set('region')}>{[...REGIONS.filter(r => r !== 'Other'), 'BM', 'LATAM', 'AF', 'TBA'].map(r => <option key={r} value={r}>{REGION_LABEL[r] || r}</option>)}</select></div>
         </div></div>
         <div className="q"><div className="row3">

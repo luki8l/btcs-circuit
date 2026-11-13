@@ -56,7 +56,8 @@ ok(cfc.tier === 1 && cfc.mode === 'month' && cfc.start === '2027-01-01' && cfc.f
 ok(!JSON.stringify(boot.events).match(/[\w.+-]+@[\w-]+\.[\w.-]+/), 'no e-mail addresses in the catalogue');
 ok(boot.suggestions.length === 0, 'sales do not see others’ suggestions');
 ok((await call(ROM, 'bootstrap')).suggestions.length === 1, 'events team sees the masterlist suggestion');
-const t4 = boot.events.find(e => e.tier === 4 && e.mode !== 'tbd');
+const today = new Date().toISOString().slice(0, 10);
+const t4 = boot.events.find(e => e.tier === 4 && e.mode === 'exact' && e.start > today);
 
 console.log('requests');
 let r = await call(ANA, 'request_create', { p_event: cfc.id, p_mode: 'attend', p_ticket: 'paid', p_cost: 4800, p_groups: [2, 1], p_meetings: 5, p_reason: 'UHNW prospects attend' });
@@ -82,6 +83,14 @@ ok(rp.status === 'approved' && rp.personId === ANA, 'events team sends someone d
 rp = await call(ANA, 'request_debrief', { p_id: rp.id, p_leads: 7, p_held: 5, p_rating: 4, p_again: 'yes', p_note: 'Good crowd' });
 ok(rp.leads === 7 && rp.rating === 4 && rp.hubspot === true, 'debrief after the event: leads, rating, HubSpot done');
 ok(await err(call(BEN, 'request_debrief', { p_id: rp.id, p_leads: 1, p_held: 1, p_rating: 1, p_again: 'no', p_note: '' })) === 'P0002', 'others cannot debrief your event');
+const past4 = boot.events.find(e => e.tier >= 4 && e.mode === 'exact' && e.end && e.end < today);
+let lv = await call(BEN, 'request_create', { p_event: past4.id, p_mode: 'attend', p_ticket: 'have', p_cost: 0, p_groups: [1], p_meetings: 0, p_reason: '' });
+ok(lv.status === 'requested', 'sales log a past visit themselves (no Tier 4–5 reason needed after the event)');
+ok(await call(ROM, 'request_decide', { p_ids: [lv.id], p_status: 'approved', p_note: '' }) === 1, 'events team confirms the logged visit');
+lv = await call(BEN, 'request_debrief', { p_id: lv.id, p_leads: 2, p_held: 3, p_rating: 2, p_again: 'no', p_note: '' });
+ok(lv.leads === 2, 'and the visit can be debriefed right away');
+const sibos = boot.events.find(e => e.name === 'Sibos'), stak = boot.events.find(e => e.name.startsWith('Staking Summit'));
+ok(sibos.country === 'US' && sibos.region === 'US' && stak.city === 'Zurich' && !boot.events.some(e => e.city === 'abu Dhabi'), 'masterlist location typos fixed');
 r = await call(ROM, 'request_reopen', { p_id: rb.id });
 ok(r.status === 'requested', 'events team takes a decision back');
 ok(await call(ROM, 'request_decide', { p_ids: [rb.id], p_status: 'declined', p_note: 'Tier 4' }) === 1, 'and declines');

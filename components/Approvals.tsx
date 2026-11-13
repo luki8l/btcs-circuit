@@ -1,10 +1,10 @@
 'use client';
 // The events team's inbox: decide requests (one or many), see coverage gaps, add suggested events.
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useApp } from './AppProvider';
 import { Tier, DateBlock, Av, Confirm, Blank } from './ui';
 import { IcCheck, IcX, IcFlag, IcUsers, IcWarn, IcInfo } from './icons';
-import { GS, MODES, ML, POLICY, chf, dateLabel, place, bestFit, isStaff, type Ev } from '@/lib/model';
+import { GS, MODES, ML, POLICY, chf, dateLabel, place, bestFit, isStaff, monthText, type Ev } from '@/lib/model';
 
 type Tab = 'inbox' | 'decided' | 'coverage' | 'suggestions';
 
@@ -17,6 +17,9 @@ export default function Approvals() {
   const [declining, setDeclining] = useState<string | null>(null);
   const [who, setWho] = useState('');
   const [covTiers, setCovTiers] = useState<number[]>([1, 2]);
+  // after adding a suggested event, open its editor so country, tier and fit get filled in
+  const [fresh, setFresh] = useState<number | null>(null);
+  useEffect(() => { if (fresh && ev.has(fresh)) { open({ kind: 'edit', id: fresh }); setFresh(null); } }, [fresh, ev, open]);
 
   const pending = data.requests.filter(r => r.status === 'requested' && ev.has(r.eventId) && (!who || r.personId === who))
     .sort((a, b) => (ev.get(a.eventId)!.sd?.getTime() ?? 9e15) - (ev.get(b.eventId)!.sd?.getTime() ?? 9e15));
@@ -35,7 +38,7 @@ export default function Approvals() {
     const r = await act<number>('request_decide', { p_ids: ids, p_status: status, p_note: n.trim() }, `${status === 'approved' ? 'Approved' : 'Declined'}: ${ids.length} request${ids.length > 1 ? 's' : ''}`);
     if (r.ok) { setSel(new Set()); setNote(''); setDeclining(null); setExp(null); }
   }
-  const policyChip = (e: Ev) => e.tk >= 4 ? <span className="pill red"><IcWarn s={12} />Needs exception</span> : e.tk ? <span className="pill ok"><IcCheck s={11} />Fits the policy</span> : <span className="pill off">Not rated</span>;
+  const policyChip = (e: Ev) => e.past ? <span className="pill off">Already happened</span> : e.tk >= 4 ? <span className="pill red"><IcWarn s={12} />Needs exception</span> : e.tk ? <span className="pill ok"><IcCheck s={11} />Fits the policy</span> : <span className="pill off">Not rated</span>;
   const allSel = pending.length > 0 && pending.every(r => sel.has(r.id));
 
   let lastMonth = '';
@@ -76,10 +79,10 @@ export default function Approvals() {
                       {head && <tr className="grp"><td colSpan={9}>{mk === 'TBD' ? 'Date TBD' : `${ML[Number(mk.slice(5)) - 1]} ${mk.slice(0, 4)}`}</td></tr>}
                       <tr className={`click ${sel.has(r.id) || exp === r.id ? 'sel' : ''}`} onClick={() => setExp(x => x === r.id ? null : r.id)}>
                         {!ro && <td onClick={x => x.stopPropagation()}><button className={`check ${sel.has(r.id) ? 'on' : ''}`} aria-label="Select" onClick={() => setSel(s => { const n = new Set(s); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); return n; })}>{sel.has(r.id) && <IcCheck s={12} />}</button></td>}
-                        <td><div className="ev"><DateBlock e={e} /><div style={{ minWidth: 0 }}><b>{e.name}</b><span>{place(e)}</span></div></div></td>
+                        <td><div className="ev"><DateBlock e={e} /><div style={{ minWidth: 0 }}><b>{e.name}</b><span>{place(e)}</span>{e.past && <span className="tag" style={{ marginTop: 4 }}>Logged after the event</span>}</div></div></td>
                         <td><Tier e={e} /></td>
                         <td><div style={{ display: 'flex', gap: 9, alignItems: 'center' }}><Av p={p} /><div><b style={{ fontWeight: 560 }}>{p?.name}</b><div className="dim small">{p?.market || p?.team}</div></div></div></td>
-                        <td className="nowrap">{MODES[r.mode][0].split(' & ')[0]}<div className="dim small">{r.meetingsPlanned} meetings</div></td>
+                        <td className="nowrap">{MODES[r.mode][0].split(' & ')[0]}<div className="dim small">{e.past ? 'was there' : `${r.meetingsPlanned} meetings`}</div></td>
                         <td className="r nowrap">{r.ticket === 'paid' ? chf(r.cost) : <span className="dim">{r.ticket === 'free' ? 'free' : 'covered'}</span>}</td>
                         <td>{policyChip(e)}</td>
                         <td>{others.length ? <span className="avs">{others.slice(0, 4).map(o => <Av key={o.id} p={people.get(o.personId)} req={o.status === 'requested'} size="sm" />)}</span> : <span className="dim small">no one</span>}</td>
@@ -181,11 +184,11 @@ export default function Approvals() {
         <div className="card">{sugs.map(s => (
           <div key={s.id} className="mine" style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}>
             <div style={{ minWidth: 0 }}><b style={{ fontSize: 15 }}>{s.name}</b>
-              <div className="sub">{[s.month, s.city].filter(Boolean).join(' · ') || 'No date yet'} · {s.source === 'masterlist' ? 'comment in the masterlist' : `from ${people.get(s.by || '')?.name || 'a colleague'}`}</div>
+              <div className="sub">{[monthText(s.month), s.city].filter(Boolean).join(' · ') || 'No date yet'} · {s.source === 'masterlist' ? 'comment in the masterlist' : `from ${people.get(s.by || '')?.name || 'a colleague'}`}</div>
               {s.reason && <p className="why" style={{ marginTop: 10, fontSize: 13.5 }}>{s.reason}</p>}
               {s.website && <a className="dim small" href={s.website} target="_blank" rel="noopener noreferrer">{s.website}</a>}</div>
             {!ro && <div className="side" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-              <button className="btn ok sm" disabled={busy} onClick={() => act('suggestion_decide', { p_id: s.id, p_add: true }, 'Added to the calendar as unrated')}>Add to calendar</button>
+              <button className="btn ok sm" disabled={busy} onClick={async () => { const r = await act<{ eventId: number }>('suggestion_decide', { p_id: s.id, p_add: true }, 'Added. Now fill in country, tier and fit.'); if (r.ok && r.data?.eventId) setFresh(r.data.eventId); }}>Add to calendar</button>
               <Confirm label="Dismiss" sure="Yes, dismiss" className="btn line sm" disabled={busy} onYes={() => act('suggestion_decide', { p_id: s.id, p_add: false }, 'Dismissed')} />
             </div>}
           </div>
