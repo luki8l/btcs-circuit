@@ -14,6 +14,8 @@ async function as(email, vp = { width: 1440, height: 900 }) {
   await p.fill('#email', email); await p.fill('#password', 'demo');
   await Promise.all([p.waitForURL(u => !u.pathname.startsWith('/login'), { timeout: 30000 }), p.click('button[type=submit]')]);
   await p.waitForLoadState('networkidle');
+  // the first-visit walkthrough offer: not now (the walkthrough has its own test)
+  if (await p.waitForSelector('.tour-offer', { timeout: 3000 }).catch(() => null)) await p.click('.tour-offer >> text=Not now');
   return p;
 }
 const shot = (p, n, full = false) => p.screenshot({ path: OUT + n + '.png', fullPage: full });

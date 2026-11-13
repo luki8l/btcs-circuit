@@ -4,9 +4,10 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from './AppProvider';
 import { Tier, Logo } from './ui';
-import { IcSearch, IcChevDown } from './icons';
+import { IcSearch, IcChevDown, IcHelp } from './icons';
 import { dateLabel, place, ROLE_LABEL, type Role } from '@/lib/model';
 import Drawer from './Drawer';
+import Tour, { TourOffer } from './Tour';
 
 const NAV: Record<Role, string[]> = {
   sales: ['discover', 'my', 'team'],
@@ -20,6 +21,21 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const { me, data, palette, setPalette, ev, today, isNew } = useApp();
   const path = usePathname();
   const [menu, setMenu] = useState(false);
+  // walkthrough: top-bar button, user menu, ?tour=1, a 'circuit:tour' event, and a one-time offer on the first visit
+  const [tour, setTour] = useState(false);
+  const [offer, setOffer] = useState(false);
+  useEffect(() => {
+    const start = () => { setOffer(false); setTour(true); };
+    window.addEventListener('circuit:tour', start);
+    let t: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const u = new URL(location.href);
+      if (u.searchParams.has('tour')) { u.searchParams.delete('tour'); history.replaceState(history.state, '', u); start(); }
+      else if (!localStorage.getItem('circuit.tour.' + me.id)) t = setTimeout(() => setOffer(true), 900);
+    } catch { /* storage off: no offer */ }
+    return () => { window.removeEventListener('circuit:tour', start); if (t) clearTimeout(t); };
+  }, [me.id]);
+  const later = () => { setOffer(false); try { localStorage.setItem('circuit.tour.' + me.id, 'later'); } catch { /* storage off */ } };
   const waiting = data.requests.filter(r => r.status === 'requested').length;
   // management sees open requests; the events team also new event suggestions to review
   const pending = waiting + (me.role === 'management' ? 0 : data.suggestions.filter(s => s.status === 'pending').length);
@@ -44,6 +60,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             ))}
           </nav>
           <div className="top-r">
+            <button className="tour-btn" onClick={() => { setOffer(false); setTour(true); }} aria-label="Walkthrough" title="A one-minute walkthrough of Circuit"><IcHelp s={17} /><span>Walkthrough</span></button>
             <button className="kbtn" onClick={() => setPalette(true)} aria-label="Find an event"><IcSearch /><span>Find an event</span><kbd>⌘K</kbd></button>
             <div className="me">
               <button onClick={() => setMenu(m => !m)} aria-expanded={menu} aria-haspopup="menu">
@@ -56,6 +73,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                   <p><b>{me.name}</b>{me.email}<br />{ROLE_LABEL[me.role]}{me.team ? ` · ${me.team}` : ''}</p>
                   <Link href="/my" role="menuitem">My events</Link>
                   <Link href="/discover" role="menuitem">All events</Link>
+                  <button role="menuitem" onClick={() => setTour(true)}>Walkthrough</button>
                   <button role="menuitem" onClick={signOut}>Sign out</button>
                 </div>
               )}
@@ -66,6 +84,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       {children}
       <Drawer />
       {palette && <Palette onClose={() => setPalette(false)} />}
+      {tour && <Tour onClose={() => setTour(false)} />}
+      {offer && !tour && <TourOffer onStart={() => { setOffer(false); setTour(true); }} onLater={later} />}
     </>
   );
 }

@@ -22,6 +22,7 @@ export const IcCollapse = (p: P) => <I {...p}><path d="M9 4v5H4M15 4v5h5M9 20v-5
 export const IcFilter = (p: P) => <I {...p}><path d="M3 5h18M6 12h12M10 19h4" /></I>;
 export const IcGrid = (p: P) => <I {...p}><rect x="3" y="4" width="18" height="17" /><path d="M3 9h18M9 4v17M15 4v17" /></I>;
 export const IcDots = (p: P) => <I {...p}><circle cx="5" cy="7" r="1.6" /><circle cx="12" cy="7" r="2.6" /><circle cx="19" cy="7" r="1.6" /><circle cx="7" cy="16" r="2.2" /><circle cx="16" cy="16" r="1.4" /></I>;
+export const IcHelp = (p: P) => <I {...p}><circle cx="12" cy="12" r="9" /><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.2-2.5 3.9M12 17h.01" /></I>;
 export const IcList = (p: P) => <I {...p}><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /></I>;
 export const IcLink = (p: P) => <I {...p}><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1" /><path d="M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" /></I>;
 export const IcEdit = (p: P) => <I {...p}><path d="M4 20h4L19 9l-4-4L4 16z" /><path d="M14 6l4 4" /></I>;

@@ -9,7 +9,9 @@ async function as(email, vp = { width: 1440, height: 900 }) {
   p.on('console', m => { if (m.type() === 'error') errs.push(`${email}: ${m.text()}`); }); p.on('pageerror', e => errs.push(`${email} PAGEERR: ${e.message}`));
   await p.goto(BASE + '/login'); await p.fill('#email', email); await p.fill('#password', 'demo');
   await Promise.all([p.waitForURL(u => !u.pathname.startsWith('/login'), { timeout: 30000 }), p.click('button[type=submit]')]);
-  await p.waitForLoadState('networkidle'); return p;
+  await p.waitForLoadState('networkidle');
+  if (await p.waitForSelector('.tour-offer', { timeout: 3000 }).catch(() => null)) await p.click('.tour-offer >> text=Not now');
+  return p;
 }
 const ov = async (p, tag) => { const o = await p.evaluate(() => [document.documentElement.scrollWidth, innerWidth]); if (o[0] > o[1] + 1) errs.push(`OVERFLOW ${tag} ${o}`); };
 let p = await as('sales.demo@example.com');

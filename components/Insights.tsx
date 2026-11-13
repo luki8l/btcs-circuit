@@ -74,7 +74,7 @@ export default function Insights() {
       </section>
 
       <div className="charts">
-        <section className="panel">
+        <section className="panel" id="gaps">
           <div className="panel-h"><div><h2 className="h2">Key events ahead, nobody from us yet</h2><p>Tier 1–2 events without a request. These are the gaps to fill.</p></div></div>
           {gaps.length ? <div className="gaplist">{gaps.map(e => (
             <button key={e.id} onClick={() => open({ kind: 'event', id: e.id, view: 'detail' })}>
@@ -100,7 +100,7 @@ export default function Insights() {
         </section>
       </div>
 
-      <section className="sect">
+      <section className="sect" id="by-team">
         <h2 className="h2">By team</h2><p className="lede">Trips, results and budget per sales team. Leads and ratings come from the debriefs.</p>
         <div className="card scroll-x"><table className="tbl">
           <thead><tr><th>Team</th><th className="r">Sales</th><th className="r">Trips ahead</th><th className="r">Waiting</th><th className="r">Events done</th><th className="r">Leads</th><th>Avg. rating</th><th className="r">Ticket budget</th></tr></thead>
@@ -119,7 +119,7 @@ export default function Insights() {
         </table></div>
       </section>
 
-      <section className="sect">
+      <section className="sect" id="results">
         <h2 className="h2">Results per event</h2><p className="lede">Leads, meetings and “would go again” from the 60-second debriefs. This replaces the yearly rating round for the 2028 tiers.</p>
         <div className="card scroll-x">{results.length ? (
           <table className="tbl">
