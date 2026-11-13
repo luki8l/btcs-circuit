@@ -48,11 +48,11 @@ export const POLICY: Record<number, [string, string]> = {
   5: ['Skip', "We don't go. Requests need a short reason."],
   0: ['Not rated yet', 'Not part of the 2027 rating round yet.'],
 };
-export const ROLE_LABEL: Record<Role, string> = { admin: 'Admin', events: 'Events', management: 'Management', sales: 'Sales' };
+export const ROLE_LABEL: Record<Role, string> = { admin: 'Admin', events: 'Approver', management: 'Read-only', sales: 'Sales' };
 export const ROLE_HINT: Record<Role, string> = {
   admin: 'Everything, plus accounts',
-  events: 'Approves requests, keeps the catalogue',
-  management: 'Sees everything, read-only',
+  events: 'Approves requests, flags events, keeps the catalogue (Roman)',
+  management: 'Sees everything, changes nothing',
   sales: 'Requests events, debriefs',
 };
 export const SIZES = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];

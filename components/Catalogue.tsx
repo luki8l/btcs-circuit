@@ -19,12 +19,12 @@ export default function Catalogue() {
     return events.filter(e => (arch ? e.archived : !e.archived) && (past || !e.past) && (!tier || String(e.tk) === tier) && (!src || e.source === src) && qs.every(x => e.hay.includes(x)))
       .sort((a, b) => (a.sd ? +a.sd : 9e15) - (b.sd ? +b.sd : 9e15));
   }, [events, q, tier, src, arch, past]);
-  if (!isStaff(me.role)) return <main className="page"><h1 className="title">Catalogue</h1><p className="muted" style={{ marginTop: 12 }}>Only the events team and admins edit the catalogue.</p></main>;
+  if (!isStaff(me.role)) return <main className="page"><h1 className="title">Catalogue</h1><p className="muted" style={{ marginTop: 12 }}>Only Roman and admins edit the catalogue.</p></main>;
   const counts = { masterlist: events.filter(e => e.source === 'masterlist').length, manual: events.filter(e => e.source === 'manual').length, suggestion: events.filter(e => e.source === 'suggestion').length };
   return (
     <main className="page">
       <section className="head">
-        <div><p className="k">Events team</p><h1 className="title">The <em>catalogue</em>.</h1><p className="lede">Every external event sales can request. Started from the 2026/27 masterlist; add, edit and archive here. Changes are live for everyone.</p></div>
+        <div><p className="k">For Roman</p><h1 className="title">The <em>catalogue</em>.</h1><p className="lede">Every external event sales can request. Started from the 2026/27 masterlist; add, edit and archive here. Changes are live for everyone.</p></div>
         <div className="stats">
           <div className="stat"><b className="num">{counts.masterlist}</b><span>from the masterlist</span></div>
           <div className="stat"><b className="num">{counts.manual + counts.suggestion}</b><span>added here</span></div>

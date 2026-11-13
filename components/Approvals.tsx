@@ -30,7 +30,7 @@ export default function Approvals() {
   const gaps = useMemo(() => [...ev.values()].filter(e => !e.past && e.mode !== 'tbd' && covTiers.includes(e.tk) && !presence(e.id).approved.length && !presence(e.id).requested.length)
     .sort((a, b) => +a.sd! - +b.sd!), [ev, presence, covTiers]);
   const ro = me.role === 'management';
-  if (!isStaff(me.role) && !ro) return <main className="page"><h1 className="title">Requests</h1><p className="muted" style={{ marginTop: 12 }}>Only the events team decides requests.</p></main>;
+  if (!isStaff(me.role) && !ro) return <main className="page"><h1 className="title">Requests</h1><p className="muted" style={{ marginTop: 12 }}>Only Roman decides requests.</p></main>;
   const t12gaps = [...ev.values()].filter(e => !e.past && e.mode !== 'tbd' && (e.tk === 1 || e.tk === 2) && !presence(e.id).approved.length && !presence(e.id).requested.length).length;
   const sugs = data.suggestions.filter(s => s.status === 'pending');
   const requesters = [...new Set(data.requests.filter(r => r.status === 'requested').map(r => r.personId))].map(id => people.get(id)).filter(Boolean);
@@ -62,7 +62,7 @@ export default function Approvals() {
         <div className={`kpi ${t12gaps ? 'red' : ''}`}><span>Tier 1–2 without anyone</span><b className="num">{t12gaps}</b><small>upcoming events</small></div>
         <div className="kpi"><span>Suggested events</span><b className="num">{sugs.length}</b><small>to review</small></div>
       </div>
-      {ro && <div className="ro"><IcInfo s={16} />You see everything here; Roman and the events team make the decisions.</div>}
+      {ro && <div className="ro"><IcInfo s={16} />You see everything here; Roman makes the decisions.</div>}
       <div className="tabs" role="tablist">
         {([['inbox', ro ? 'Waiting' : 'To decide', data.requests.filter(r => r.status === 'requested').length], ['decided', 'Decided', null], ['coverage', 'Coverage gaps', t12gaps], ['suggestions', 'Suggestions', sugs.length]] as const).map(([k, l, n]) => (
           <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}>{l}{n != null && <span className="n">{n}</span>}</button>

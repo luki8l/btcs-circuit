@@ -11,9 +11,9 @@ import Tour, { TourOffer } from './Tour';
 
 const NAV: Record<Role, string[]> = {
   sales: ['discover', 'my', 'team'],
-  events: ['approvals', 'discover', 'team', 'insights', 'catalogue'],
+  events: ['approvals', 'insights', 'discover', 'team', 'catalogue'],   // Roman: decides, and is the CEO who reads the Overview
   management: ['insights', 'discover', 'approvals', 'team'],
-  admin: ['approvals', 'discover', 'team', 'insights', 'catalogue', 'people'],
+  admin: ['approvals', 'insights', 'discover', 'team', 'catalogue', 'people'],
 };
 const LABEL: Record<string, string> = { discover: 'Events', my: 'My events', approvals: 'Requests', team: 'Team', catalogue: 'Catalogue', insights: 'Overview', people: 'People' };
 
@@ -37,7 +37,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   }, [me.id]);
   const later = () => { setOffer(false); try { localStorage.setItem('circuit.tour.' + me.id, 'later'); } catch { /* storage off */ } };
   const waiting = data.requests.filter(r => r.status === 'requested').length;
-  // management sees open requests; the events team also new event suggestions to review
+  // Roman (and admins) also get new event suggestions to review; read-only accounts only see open requests
   const pending = waiting + (me.role === 'management' ? 0 : data.suggestions.filter(s => s.status === 'pending').length);
   // My events: steps left (HubSpot, debrief) plus decisions not seen yet
   const started = (id: number) => { const e = ev.get(id); return !!e && !!e.sd && e.mode !== 'tbd' && e.sd <= today; };

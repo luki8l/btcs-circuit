@@ -16,7 +16,7 @@ export async function GET(req: Request) {
   let data: Data;
   try { data = await (await rpcClient())<Data>('bootstrap'); }
   catch (e) { return NextResponse.json({ error: messageOf(e) }, { status: statusOf(e) }); }
-  if (!canSeeInsights(data.me.role)) return NextResponse.json({ error: 'Reports are for the events team and management.' }, { status: 403 });
+  if (!canSeeInsights(data.me.role)) return NextResponse.json({ error: 'Reports are for Roman and management.' }, { status: 403 });
   const R = buildReport(data), name = `Circuit-events-report-${ymd(new Date())}`;
   try {
     if (format === 'xlsx') {

@@ -35,7 +35,7 @@ export default function MyEvents() {
         <div className="side"><Tier e={e} /><StatusPill r={r} past={started(r)} /></div>
         <div className="todo">
           {r.decisionNote && <div className="todo-i"><span className="dim">{r.status === 'declined' ? 'Declined' : 'Note'}{by ? ` by ${by}` : ''}: “{r.decisionNote}”</span></div>}
-          {r.status === 'requested' && <div className="todo-i"><span className="dim">{e.past ? 'Visit logged. Roman confirms it, then you can debrief' : `Waiting for the events team · ${r.meetingsPlanned} meetings planned`} · {r.groups.map(g => GS[g]).join(', ')}</span>
+          {r.status === 'requested' && <div className="todo-i"><span className="dim">{e.past ? 'Visit logged. Roman confirms it, then you can debrief' : `Waiting for Roman · ${r.meetingsPlanned} meetings planned`} · {r.groups.map(g => GS[g]).join(', ')}</span>
             <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}><button className="btn sm line" onClick={() => open({ kind: 'event', id: e.id, view: 'edit-request', rid: r.id })}>Change</button>
               <Confirm label="Withdraw" sure="Yes, withdraw" disabled={busy} onYes={() => act('request_withdraw', { p_id: r.id }, 'Request withdrawn')} /></span></div>}
           {r.status === 'approved' && <>
@@ -46,7 +46,7 @@ export default function MyEvents() {
               <span className="lbl">{started(r) ? 'Assign leads in HubSpot and debrief' : 'After the event: assign leads and debrief'}</span>
               {r.rating ? <span className="dim small" style={{ marginLeft: 'auto' }}>{r.leads} leads · rated {r.rating}/5 · go again: {r.goAgain}</span>
                 : started(r) && <button className="btn red sm" onClick={() => open({ kind: 'event', id: e.id, view: 'debrief', rid: r.id })}>Start 60-sec debrief</button>}</div>
-            {!started(r) && <div className="todo-i"><Confirm label="I can’t go any more" sure="Yes, cancel my spot" disabled={busy} onYes={() => act('request_withdraw', { p_id: r.id }, 'Spot cancelled. The events team sees it.')} /></div>}
+            {!started(r) && <div className="todo-i"><Confirm label="I can’t go any more" sure="Yes, cancel my spot" disabled={busy} onYes={() => act('request_withdraw', { p_id: r.id }, 'Spot cancelled. Roman sees it.')} /></div>}
           </>}
         </div>
       </article>

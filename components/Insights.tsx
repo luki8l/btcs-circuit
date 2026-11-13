@@ -15,7 +15,7 @@ import { buildReport } from '@/lib/report';
 export default function Insights() {
   const { me, data, ev, events, people, presence, open, today } = useApp();
   const all = useMemo(() => new Set(events.map(e => e.id)), [events]);
-  if (!canSeeInsights(me.role)) return <main className="page"><h1 className="title">Overview</h1><p className="muted" style={{ marginTop: 12 }}>The overview is for the events team and management.</p></main>;
+  if (!canSeeInsights(me.role)) return <main className="page"><h1 className="title">Overview</h1><p className="muted" style={{ marginTop: 12 }}>The overview is for Roman and management.</p></main>;
   // the same numbers as the Excel and PDF report
   const R = buildReport(data, events), K = R.kpi;
   const up = events.filter(e => !e.past), waiting = K.waiting;

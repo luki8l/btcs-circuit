@@ -133,7 +133,7 @@ function Detail({ e }: { e: Ev }) {
         )}
         {staff && (
           <section className="sec">
-            <div className="lab"><span>For the events team</span></div>
+            <div className="lab"><span>Your tools (Roman)</span></div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <button className="btn line sm" disabled={busy} onClick={() => act('flag_set', { p_event: e.id, p_on: !flag, p_note: '' }, flag ? 'Flag removed' : 'Flagged: sales see “Roman wants someone”')}><IcFlag s={14} />{flag ? 'Remove flag' : 'We need someone here'}</button>
               <button className="btn line sm" onClick={() => open({ kind: 'event', id: e.id, view: 'assign' })}><IcUsers s={14} />{e.past ? 'Log who was there' : 'Send someone'}</button>
@@ -177,12 +177,12 @@ function RequestForm({ e, rid }: { e: Ev; rid?: string }) {
   }, [data.requests, events, e, me.id]);
   const hints: [string, string][] = [];
   if (past) hints.push(['', 'Roman confirms that you were there. Then it shows up in My events for the 60-second debrief with your leads.']);
-  else if (strict) hints.push(['warn', `Tier ${e.tk}: the policy says don’t go. Add a reason so the events team can make an exception.`]);
+  else if (strict) hints.push(['warn', `Tier ${e.tk}: the policy says don’t go. Add a reason so Roman can make an exception.`]);
   else if (e.tk) hints.push(['good', `Fits the policy for Tier ${e.tk}: ${POLICY[e.tk][0].toLowerCase()}.`]);
   const names = others.map(r => people.get(r.personId)?.name).filter(Boolean).join(', ');
   if (others.length) hints.push(['', past ? `Also there from Bitcoin Suisse: ${names}.` : `${others.length} colleague${others.length > 1 ? 's' : ''} already on it: ${names}. Agree who covers which clients.`]);
   if (!past) overlaps.forEach(o => hints.push(['warn', `Overlaps with ${o.name} (${dateLabel(o)}), which you also requested.`]));
-  if (flagged.has(e.id)) hints.push(['good', 'The events team flagged this event. They want someone there.']);
+  if (flagged.has(e.id)) hints.push(['good', 'Roman flagged this event: he wants someone there.']);
   async function submit(ev: React.FormEvent) {
     ev.preventDefault();
     if (strict && why.trim().length < 5) { setErr('Tier 4–5 events need a short reason.'); return; }
@@ -321,20 +321,20 @@ function Suggest() {
   async function submit(ev: React.FormEvent) {
     ev.preventDefault();
     if (!f.name.trim()) { setErr('Add the event name.'); return; }
-    const r = await act('suggestion_create', { p_name: f.name.trim(), p_month: f.month, p_city: f.city.trim(), p_website: f.website.trim(), p_reason: f.why.trim() }, 'Sent to the events team');
+    const r = await act('suggestion_create', { p_name: f.name.trim(), p_month: f.month, p_city: f.city.trim(), p_website: f.website.trim(), p_reason: f.why.trim() }, 'Sent to Roman');
     if (r.ok) close(); else setErr(r.error || '');
   }
   const set = (k: keyof typeof f) => (x: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: x.target.value });
   return (
     <>
-      <header className="dr-h"><div className="dr-top"><span /><button className="icon" onClick={close} aria-label="Close"><IcX /></button></div><h2 className="title">Suggest an <em style={{ fontStyle: 'normal', color: 'var(--red)' }}>event</em></h2><p className="muted">Missing something? The events team adds it to the calendar.</p></header>
+      <header className="dr-h"><div className="dr-top"><span /><button className="icon" onClick={close} aria-label="Close"><IcX /></button></div><h2 className="title">Suggest an <em style={{ fontStyle: 'normal', color: 'var(--red)' }}>event</em></h2><p className="muted">Missing something? Roman adds it to the calendar.</p></header>
       <form className="dr-b" id="sugForm" onSubmit={submit} noValidate>
         <div className="q"><div className="field"><label htmlFor="sname">Event name</label><input id="sname" className="input" value={f.name} onChange={set('name')} maxLength={200} data-autofocus /></div></div>
         <div className="q"><div className="row2"><div className="field"><label htmlFor="smonth">Month</label><input id="smonth" className="input" type="month" value={f.month} onChange={set('month')} /></div><div className="field"><label htmlFor="scity">City</label><input id="scity" className="input" value={f.city} onChange={set('city')} maxLength={120} /></div></div></div>
         <div className="q"><div className="field"><label htmlFor="sweb">Website</label><input id="sweb" className="input" type="url" value={f.website} onChange={set('website')} placeholder="https://" maxLength={500} /></div></div>
         <div className="q"><div className="field"><label htmlFor="swhy">Why should Bitcoin Suisse be there?</label><textarea id="swhy" className="area" value={f.why} onChange={set('why')} maxLength={2000} /></div>{err && <p className="err" style={{ marginTop: 8 }}>{err}</p>}</div>
       </form>
-      <footer className="dr-f"><button type="submit" form="sugForm" className="btn red lg" disabled={busy}>Send to the events team</button></footer>
+      <footer className="dr-f"><button type="submit" form="sugForm" className="btn red lg" disabled={busy}>Send to Roman</button></footer>
     </>
   );
 }
