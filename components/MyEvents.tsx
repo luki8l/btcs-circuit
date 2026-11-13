@@ -1,7 +1,8 @@
 'use client';
 import { useApp } from './AppProvider';
-import { Tier, DateBlock, StatusPill, Confirm } from './ui';
-import { IcCheck, IcPlus } from './icons';
+import Link from 'next/link';
+import { Tier, DateBlock, StatusPill, Confirm, Blank } from './ui';
+import { IcCheck, IcPlus, IcCal } from './icons';
 import { GS, MODES, TICKETS, ROLE_LABEL, chf, dateLabel, place, type Req } from '@/lib/model';
 
 export default function MyEvents() {
@@ -53,23 +54,24 @@ export default function MyEvents() {
   return (
     <main className="page">
       <section className="head">
-        <div><p className="k">{me.name} · {ROLE_LABEL[me.role]}{me.market ? ` · ${me.market}` : ''}</p><h1 className="title">My <em>events</em>.</h1>
-          <p className="lede">What you requested, what was decided and what’s left to do in HubSpot.</p></div>
+        <div><h1 className="title">My events</h1>
+          <p className="lede">Your requests, Roman’s decisions and what’s left to do: log the event in HubSpot, and after the event a 60-second debrief.</p></div>
         <div className="stats">
           <div className="stat"><b className="num">{upc.length + act1.length}</b><span>approved</span></div>
           <div className="stat"><b className="num">{wait.length}</b><span>waiting</span></div>
-          <div className="stat red"><b className="num">{leads}</b><span>leads from your events</span></div>
+          <div className="stat"><b className="num">{leads}</b><span>leads from your events</span></div>
         </div>
       </section>
       <div className="toolbar">
-        <label className="dim small" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>Your main target group
-          <select className="select sm" style={{ width: 220 }} value={group} onChange={e => setGroup(Number(e.target.value))}>{GS.map((g, i) => <option key={g} value={i}>{g}</option>)}</select></label>
-        <span style={{ flex: 1 }} />
+        <Link className="btn red" href="/discover">Find an event</Link>
         <button className="btn line" onClick={() => open({ kind: 'suggest' })}><IcPlus />Suggest an event</button>
+        <span className="sp" />
+        <label className="dim small" style={{ display: 'flex', gap: 10, alignItems: 'center' }}>Your main target group
+          <select className="select sm" style={{ width: 200 }} value={group} onChange={e => setGroup(Number(e.target.value))}>{GS.map((g, i) => <option key={g} value={i}>{g}</option>)}</select></label>
       </div>
-      {!mine.length && <div className="card empty" style={{ marginTop: 10 }}>Nothing yet. Find an event in Discover and request it.</div>}
-      {sec('Needs your action', 'HubSpot and debriefs for events you were approved for.', act1)}
-      {sec('Waiting for the events team', '', wait)}
+      {!mine.length && <div className="card" style={{ marginTop: 10 }}><Blank icon={<IcCal s={22} />} title="No events yet" text="Find an event in the list, press “Request a spot”, and it shows up here with every next step." action={<Link className="btn red" href="/discover">Browse events</Link>} /></div>}
+      {sec('To do', 'Steps left for events you were approved for.', act1)}
+      {sec('Waiting for Roman', '', wait)}
       {sec('Coming up', '', upc)}
       {sec('Closed', 'Debrief done, leads logged.', closed)}
       {sec('Declined', '', dec)}

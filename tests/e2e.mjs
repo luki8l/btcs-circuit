@@ -21,23 +21,24 @@ const ov = async (p, tag) => { const o = await p.evaluate(() => [document.docume
 
 // sales
 let p = await as('sara@example.com');
-await p.goto(BASE + '/discover'); await p.waitForSelector('svg.season'); await shot(p, '01-discover'); await ov(p, 'discover');
-await p.click('text=Filters'); await p.waitForTimeout(200); await shot(p, '02-filters');
-await p.click('.fpanel >> text=T1'); await p.click('.fpanel >> text=T2'); await p.waitForTimeout(200); await shot(p, '03-filtered');
-await p.click('text=Clear all');
+await p.goto(BASE + '/discover'); await p.waitForSelector('.erow'); await shot(p, '01-events'); await ov(p, 'events');
+await p.click('.dd >> text=Tier'); await p.waitForTimeout(150); await shot(p, '02-tier-dropdown');
+await p.click('.dd-panel >> text=Tier 1'); await p.keyboard.press('Escape'); await p.waitForTimeout(150); await shot(p, '03-filtered');
+await p.click('.quick >> text=All upcoming');
 await p.click('.toolbar .seg >> text=Calendar'); await p.waitForTimeout(300); await shot(p, '04-calendar');
-for (let i = 0; i < 1; i++) await p.click('[aria-label="Next month"]'); await p.waitForTimeout(200); await shot(p, '04b-calendar-dec');
 await p.click('text=Full screen'); await p.waitForTimeout(300); await shot(p, '05-calendar-full'); await p.keyboard.press('Escape'); await p.waitForTimeout(200);
-await p.click('.toolbar .seg >> text=Season'); await p.click('text=Full screen'); await p.waitForTimeout(300); await shot(p, '05b-season-full'); await p.click('.full >> text=Exit');
-await p.click('.toolbar .seg >> text=List'); await p.waitForTimeout(300); await shot(p, '06-list');
+await p.click('.toolbar .seg >> text=Year'); await p.waitForTimeout(300); await shot(p, '05b-year');
+await p.click('.toolbar .seg >> text=List'); await p.waitForTimeout(200);
 await p.fill('input[aria-label="Search events"]', 'st. moritz'); await p.waitForTimeout(200);
 await p.click('.erow'); await p.waitForSelector('.drawer'); await p.waitForTimeout(300); await shot(p, '07-drawer');
-await p.click('text=Request to attend'); await p.waitForTimeout(200);
-await p.click('.opt >> text=Paid ticket'); await p.fill('#cost', '4800'); await p.fill('#why', 'Three UHNW prospects confirmed.');
+await p.click('.dr-f >> text=Request a spot'); await p.waitForTimeout(200);
+await p.click('.opt >> text=Paid'); await p.fill('#cost', '4800'); await p.fill('#why', 'Three UHNW prospects confirmed.');
 await shot(p, '08-request');
 await p.click('button[form=reqForm]'); await p.waitForSelector('text=Request sent'); await shot(p, '09-sent');
 await p.click('text=Go to My events'); await p.waitForURL('**/my'); await p.waitForTimeout(400); await shot(p, '10-my', true);
-await p.keyboard.press('Meta+k'); await p.waitForSelector('.pal'); await p.keyboard.type('ethcc'); await p.waitForTimeout(150); await shot(p, '11-palette'); await p.keyboard.press('Escape');
+await p.goto(BASE + '/discover'); await p.waitForSelector('.erow');
+await p.click('.erow >> nth=2 >> text=Request a spot'); await p.waitForSelector('#reqForm'); await shot(p, '10b-direct-request'); await p.keyboard.press('Escape');
+await p.keyboard.press('Control+k'); await p.waitForSelector('.pal'); await p.keyboard.type('ethcc'); await p.waitForTimeout(150); await shot(p, '11-palette'); await p.keyboard.press('Escape');
 await p.goto(BASE + '/team'); await p.waitForSelector('.matrix'); await shot(p, '12-team'); await ov(p, 'team');
 await p.context().close();
 
@@ -56,6 +57,13 @@ await p.click('text=Add event'); await p.waitForSelector('#edForm'); await shot(
 await p.goto(BASE + '/insights'); await p.waitForSelector('.kpis'); await shot(p, '28-insights', true); await ov(p, 'insights');
 await p.context().close();
 
+// ceo (read-only)
+p = await as('ceo@example.com');
+await p.waitForSelector('.kpis'); await shot(p, '29-ceo-overview', true); await ov(p, 'ceo-overview');
+await p.goto(BASE + '/approvals'); await p.waitForTimeout(500); await shot(p, '29b-ceo-requests');
+if (await p.$('.bulk, button.ok')) errs.push('CEO sees approve buttons');
+await p.context().close();
+
 // admin
 p = await as('lukas@example.com');
 await p.goto(BASE + '/people'); await p.waitForSelector('#pn');
@@ -65,8 +73,8 @@ await p.context().close();
 
 // mobile, sales
 p = await as('sara@example.com', { width: 390, height: 844 });
-await p.goto(BASE + '/discover'); await p.waitForSelector('svg.season'); await shot(p, '40-mobile'); await ov(p, 'mobile-discover');
-await p.click('.toolbar .seg >> text=List'); await p.waitForTimeout(200); await shot(p, '41-mobile-list'); await ov(p, 'mobile-list');
+await p.goto(BASE + '/discover'); await p.waitForSelector('.erow'); await shot(p, '40-mobile'); await ov(p, 'mobile-discover');
+await p.click('.dd >> text=When'); await p.waitForTimeout(150); await shot(p, '41-mobile-dropdown'); await p.keyboard.press('Escape');
 await p.click('.erow'); await p.waitForSelector('.drawer'); await p.waitForTimeout(300); await shot(p, '42-mobile-drawer');
 await p.goto(BASE + '/my'); await p.waitForTimeout(500); await shot(p, '43-mobile-my'); await ov(p, 'mobile-my');
 await p.context().close();

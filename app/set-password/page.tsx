@@ -4,7 +4,7 @@ export default function SetPassword() {
   return (
     <main className="login">
       <section className="login-l">
-        <img src="/logo.png" alt="Bitcoin Suisse" />
+        <img src="/logo-dark.png" alt="Bitcoin Suisse" />
         <h1 className="title">Welcome to <em>Circuit</em>.</h1>
         <p>Choose a password. Next time you sign in with your e-mail and this password.</p>
       </section>

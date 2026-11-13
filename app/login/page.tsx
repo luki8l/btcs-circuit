@@ -6,7 +6,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
   return (
     <main className="login">
       <section className="login-l">
-        <img src="/logo.png" alt="Bitcoin Suisse" />
+        <img src="/logo-dark.png" alt="Bitcoin Suisse" />
         <h1 className="title">External events, <em>one circuit</em>.</h1>
         <Art />
         <p>Find the conference, request your spot, get it approved, log it in HubSpot. For the sales and events teams of Bitcoin Suisse.</p>

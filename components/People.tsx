@@ -68,7 +68,7 @@ export default function People({ people, feed, secretKey }: { people: AdminPerso
             {res?.err && <span className="err">{res.err}</span>}
           </div>
           {res?.link && (
-            <div className="banner" style={{ borderColor: 'var(--line-2)', background: 'var(--bg-2)', flexDirection: 'column', gap: 10 }}>
+            <div className="banner" style={{ borderColor: 'var(--line-2)', background: 'var(--ok-soft)', flexDirection: 'column', gap: 10 }}>
               <span><IcCheck s={14} /> <b>Account ready for {res.email}.</b> Send this sign-in link. It works once, for 24 hours, and lets them choose a password.</span>
               <div style={{ display: 'flex', gap: 8, width: '100%' }}><input className="input" readOnly value={res.link} onFocus={e => e.target.select()} aria-label="Sign-in link" /><button type="button" className="btn white" onClick={() => copy(res.link!)}><IcLink />Copy</button></div>
             </div>

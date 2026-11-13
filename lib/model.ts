@@ -30,22 +30,22 @@ export type Ev = RawEvent & {
 export const GROUPS = ['Crypto HNWIs & founders', 'TradFi HNWI / UHNWI', 'Family offices & EAMs', 'Crypto treasury companies', 'Funds (crypto & curious)'];
 export const GS = ['Crypto HNWI', 'TradFi HNWI', 'FO / EAM', 'Treasury cos', 'Funds'];
 export const MODES: Record<Mode, [string, string]> = {
-  attend: ['Attend & work the floor', 'Ticket, meetings, networking'],
-  speak: ['Speaker or panel', 'Stage slot for Bitcoin Suisse'],
-  meetings: ['Side meetings only', 'No ticket, meetings around it'],
-  sponsor: ['Propose a sponsorship', 'Booth, dinner or partner package'],
+  attend: ['Attend', 'Ticket, meetings, networking'],
+  speak: ['Speak or panel', 'A stage slot for Bitcoin Suisse'],
+  meetings: ['Meetings only', 'No ticket, meetings around it'],
+  sponsor: ['Sponsor', 'Booth, dinner or partner package'],
 };
 export const TICKETS: Record<Ticket, [string, string]> = {
-  free: ['Free ticket', 'Guest, speaker or partner pass'],
-  paid: ['Paid ticket', 'Needs marketing budget'],
-  have: ['Already covered', 'I have a ticket or invite'],
+  free: ['Free', 'Guest, speaker or partner pass'],
+  paid: ['Paid', 'Needs budget'],
+  have: ['I have one', 'Ticket or invite already there'],
 };
 export const POLICY: Record<number, [string, string]> = {
-  1: ['Stage presence', 'Selection logic: Andrej on stage when reach and cost are medium to high, otherwise someone else from Bitcoin Suisse on stage.'],
-  2: ['Stage presence', 'Selection logic: someone from Bitcoin Suisse on stage, cost low to zero.'],
-  3: ['Work the floor', 'Selection logic: RMs get tickets and work the floor.'],
-  4: ["Don't go", "Selection logic: don't go. A request needs a reason for an exception."],
-  5: ["Don't go", "Selection logic: don't go. A request needs a reason for an exception."],
+  1: ['Key event', 'Bitcoin Suisse should be on stage. Andrej speaks when reach and cost are medium to high, otherwise someone else from the team.'],
+  2: ['Important', 'Someone from Bitcoin Suisse on stage; cost should be low to zero.'],
+  3: ['Worth going', 'Relationship managers get tickets and work the floor.'],
+  4: ['Low priority', "Usually we don't go. Requests need a short reason."],
+  5: ['Skip', "We don't go. Requests need a short reason."],
   0: ['Not rated yet', 'Not part of the 2027 rating round yet.'],
 };
 export const ROLE_LABEL: Record<Role, string> = { admin: 'Admin', events: 'Events', management: 'Management', sales: 'Sales' };

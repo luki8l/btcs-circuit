@@ -10,11 +10,11 @@ import Drawer from './Drawer';
 
 const NAV: Record<Role, string[]> = {
   sales: ['discover', 'my', 'team'],
-  events: ['approvals', 'discover', 'team', 'catalogue', 'insights', 'my'],
-  management: ['insights', 'discover', 'team', 'my'],
-  admin: ['approvals', 'discover', 'team', 'catalogue', 'insights', 'people', 'my'],
+  events: ['approvals', 'discover', 'team', 'insights', 'catalogue'],
+  management: ['insights', 'discover', 'approvals', 'team'],
+  admin: ['approvals', 'discover', 'team', 'insights', 'catalogue', 'people'],
 };
-const LABEL: Record<string, string> = { discover: 'Discover', my: 'My events', approvals: 'Approvals', team: 'Team', catalogue: 'Catalogue', insights: 'Insights', people: 'People' };
+const LABEL: Record<string, string> = { discover: 'Events', my: 'My events', approvals: 'Requests', team: 'Team', catalogue: 'Catalogue', insights: 'Overview', people: 'People' };
 
 export default function Shell({ children }: { children: React.ReactNode }) {
   const { me, data, palette, setPalette } = useApp();
@@ -32,12 +32,12 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           <nav className="nav" aria-label="Main">
             {NAV[me.role].map(k => (
               <Link key={k} href={`/${k}`} aria-current={path.startsWith(`/${k}`) ? 'page' : undefined}>
-                {LABEL[k]}{k === 'approvals' && pending > 0 && <span className="cnt">{pending}</span>}{k === 'my' && todo > 0 && <span className="cnt" title="Approved events with steps left">{todo}</span>}
+                {LABEL[k]}{k === 'approvals' && pending > 0 && me.role !== 'management' && <span className="cnt">{pending}</span>}{k === 'my' && todo > 0 && <span className="cnt" title="Approved events with steps left">{todo}</span>}
               </Link>
             ))}
           </nav>
           <div className="top-r">
-            <button className="kbtn" onClick={() => setPalette(true)} aria-label="Search events"><IcSearch /><span>Jump to an event</span><kbd>⌘K</kbd></button>
+            <button className="kbtn" onClick={() => setPalette(true)} aria-label="Find an event"><IcSearch /><span>Find an event</span><kbd>⌘K</kbd></button>
             <div className="me">
               <button onClick={() => setMenu(m => !m)} aria-expanded={menu} aria-haspopup="menu">
                 <span className="av">{me.initials}</span>
@@ -48,6 +48,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                 <div className="menu" role="menu">
                   <p><b>{me.name}</b>{me.email}<br />{ROLE_LABEL[me.role]}{me.team ? ` · ${me.team}` : ''}</p>
                   <Link href="/my" role="menuitem">My events</Link>
+                  <Link href="/discover" role="menuitem">All events</Link>
                   <button role="menuitem" onClick={signOut}>Sign out</button>
                 </div>
               )}

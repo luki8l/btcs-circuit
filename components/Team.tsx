@@ -2,6 +2,9 @@
 // Who goes where: people × months. Approved solid, waiting dashed. The coordination view for everyone.
 import { useMemo, useState } from 'react';
 import { useApp, h } from './AppProvider';
+import Link from 'next/link';
+import { Blank } from './ui';
+import { IcUsers } from './icons';
 import { MS, ML, ROLE_LABEL, mIdx, dateLabel, place, type Req } from '@/lib/model';
 
 export default function Team() {
@@ -31,7 +34,7 @@ export default function Team() {
   return (
     <main className="page">
       <section className="head">
-        <div><p className="k">Coordination</p><h1 className="title">Who goes <em>where</em>.</h1><p className="lede">Everyone’s events by month. Solid = approved, dashed = waiting. Use it to split the floor and avoid double trips.</p></div>
+        <div><h1 className="title">Who goes where</h1><p className="lede">Everyone’s events by month, so we split the floor and avoid double trips. Solid = approved, dashed = waiting for Roman.</p></div>
         <div className="stats">
           <div className="stat"><b className="num">{new Set(reqs.filter(r => r.status === 'approved' && !ev.get(r.eventId)?.past).map(r => r.personId)).size}</b><span>people on the road</span></div>
           <div className="stat"><b className="num">{reqs.filter(r => r.status === 'approved' && !ev.get(r.eventId)?.past).length}</b><span>approved trips ahead</span></div>
@@ -43,6 +46,7 @@ export default function Team() {
         <span style={{ flex: 1 }} />
         <div className="seg"><button aria-pressed={back === 0} onClick={() => setBack(0)}>From now</button><button aria-pressed={back === 3} onClick={() => setBack(3)}>Incl. last 3 months</button></div>
       </div>
+      {!reqs.length && <div className="card" style={{ marginBottom: 14 }}><Blank icon={<IcUsers s={22} />} title="Nobody is booked yet" text="As soon as colleagues request events, they show up here by person and month." action={<Link className="btn red" href="/discover">Browse events</Link>} /></div>}
       <div className="matrix">
         <table>
           <colgroup><col className="c-who" /><col className="c-load" />{months.map(m => <col key={m} />)}<col /></colgroup>

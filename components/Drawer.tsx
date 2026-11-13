@@ -31,20 +31,19 @@ export default function Drawer() {
 
 function Head({ e, back }: { e: Ev; back?: () => void }) {
   const { close } = useApp();
-  const p = POLICY[e.tk];
   return (
     <header className="dr-h">
       <div className="dr-top">
-        {back ? <button className="icon" onClick={back} aria-label="Back"><IcBack /></button> : <span />}
+        {back ? <button className="btn ghost sm" style={{ paddingLeft: 4 }} onClick={back}><IcBack />Back to event</button> : <span />}
         <button className="icon" onClick={close} aria-label="Close"><IcX /></button>
       </div>
-      <div className="policy"><Tier e={e} /><span><b>{p[0]}</b>{e.tk && e.tierPrev && e.tierPrev !== e.tk ? ` · was T${e.tierPrev}` : ''}{e.isNew ? ' · new in the list' : ''}</span></div>
       <h2 className="title">{e.name}</h2>
       <div className="dr-meta">
-        <span><IcCal s={14} />{dateLabel(e)}</span>
-        <span><IcPin s={14} />{place(e)}</span>
+        <span><IcCal s={15} />{dateLabel(e)}</span>
+        <span><IcPin s={15} />{place(e)}</span>
         {e.website && /^https?:\/\//.test(e.website) && <a href={e.website} target="_blank" rel="noopener noreferrer">Website <IcExt s={13} /></a>}
       </div>
+      <div className="policy"><Tier e={e} full />{e.tk && e.tierPrev && e.tierPrev !== e.tk ? <span className="dim small">was Tier {e.tierPrev} last year</span> : null}{e.isNew && <span className="tag">New in the list</span>}</div>
     </header>
   );
 }
@@ -67,93 +66,89 @@ function Detail({ e }: { e: Ev }) {
   const all = [...p.approved, ...p.requested];
   const mine = all.find(r => r.personId === me.id);
   const staff = isStaff(me.role);
-  const maxd = Math.max(1, ...e.ratingDist);
-  const cons = e.ratingSd == null || e.ratingN < 3 ? '' : e.ratingSd < .85 ? 'Strong agreement' : e.ratingSd < 1.2 ? 'Some disagreement' : 'Split opinions';
   const done = data.requests.filter(r => r.eventId === e.id && r.status === 'approved' && r.rating);
   const flag = data.flags.find(f => f.eventId === e.id);
+  const fitted = !e.fit.every(x => x == null);
   return (
     <>
       <Head e={e} />
       <div className="dr-b">
-        {flag && <div className="banner"><IcFlag /><span><b>The events team wants Bitcoin Suisse here.</b>{flag.note ? ` “${flag.note}”` : ''} Request it if it fits your pipeline.</span></div>}
+        {flag && <div className="banner"><IcFlag /><span><b>Roman wants Bitcoin Suisse at this event.</b>{flag.note ? ` “${flag.note}”` : ''} Request it if it fits your clients.</span></div>}
         <section className="sec">
-          <div className="lab"><span>Bitcoin Suisse at this event</span><span>{p.approved.length} going · {p.requested.length} waiting</span></div>
+          <div className="lab"><span>Who from Bitcoin Suisse goes</span></div>
           {all.length ? <div className="people">{all.map(r => {
             const who = people.get(r.personId);
             return (
               <div className="person" key={r.id}>
                 <Av p={who} req={r.status === 'requested'} size="lg" />
-                <div><b>{who?.name || 'Former colleague'}</b><small>{MODES[r.mode][0]}{who?.market ? ` · ${who.market}` : ''}{r.reason && staff ? ` · “${r.reason}”` : ''}</small></div>
+                <div><b>{who?.name || 'Former colleague'}{r.personId === me.id ? ' (you)' : ''}</b><small>{MODES[r.mode][0]}{who?.market ? ` · ${who.market}` : ''}</small></div>
                 {r.status === 'approved' ? <span className="pill ok"><i />Going</span> : staff
-                  ? <span style={{ display: 'flex', gap: 6 }}><button className="btn ok sm" disabled={busy} onClick={() => act('request_decide', { p_ids: [r.id], p_status: 'approved', p_note: '' }, `Approved: ${who?.name}`)}>Approve</button></span>
+                  ? <button className="btn ok sm" disabled={busy} onClick={() => act('request_decide', { p_ids: [r.id], p_status: 'approved', p_note: '' }, `Approved: ${who?.name}`)}><IcCheck s={12} />Approve</button>
                   : <span className="pill wait"><i />Waiting</span>}
               </div>
             );
-          })}</div> : <p className="note">No one from Bitcoin Suisse yet.{e.past ? '' : ' Be the first to request it.'}</p>}
-        </section>
-        <section className="sec"><div className="lab"><span>Policy for {e.tk ? `Tier ${e.tk}` : 'unrated events'}</span></div><p className="note">{POLICY[e.tk][1]}</p></section>
-        <section className="sec">
-          <div className="lab"><span>Who you’ll meet</span><span>buy-side fit 1–5</span></div>
-          {e.fit.every(x => x == null) ? <p className="note">Not rated yet.</p> : <div className="fitrows">{GROUPS.map((n, i) => (
-            <div key={n} className={`fitrow ${i === group ? 'me' : ''}`}><span>{n}</span><span className="track"><i style={{ width: `${(e.fit[i] || 0) * 20}%` }} /></span><b>{e.fit[i] ?? '–'}</b></div>
-          ))}</div>}
+          })}</div> : <div className="first"><IcUsers />{e.past ? 'Nobody from Bitcoin Suisse went.' : 'Nobody from Bitcoin Suisse yet. Be the first.'}</div>}
         </section>
         <section className="sec">
-          <div className="lab"><span>Key facts</span></div>
-          <div className="facts">
-            <div className="fact"><span>Audience</span><b>{e.audience || 'n/a'}{e.size ? ` (${e.size})` : ''}</b></div>
-            <div className="fact"><span>Type</span><b>{e.kind || 'n/a'}</b></div>
-            <div className="fact"><span>Ticket</span><b>{e.costTicket || 'n/a'}</b></div>
-            <div className="fact"><span>Sponsorship</span><b>{e.costSponsor || 'n/a'}</b></div>
-            <div className="fact"><span>Focus</span><b>{e.focus || 'n/a'}</b></div>
-            <div className="fact"><span>Region</span><b>{REGION_LABEL[e.reg] || e.region}</b></div>
-          </div>
+          <div className="lab"><span>What Tier {e.tk || '–'} means</span></div>
+          <p className="note">{POLICY[e.tk][1]}</p>
         </section>
-        {e.ratingN > 0 && e.ratingAvg != null && (
+        {fitted && (
           <section className="sec">
-            <div className="lab"><span>Team rating 2027</span><span>{e.ratingN} colleagues</span></div>
-            <div className="rating">
-              <div><div className="big num">{Number(e.ratingAvg).toFixed(1)}<small> / 5</small></div><div className="dim small" style={{ marginTop: 6 }}>Median {e.ratingMedian ?? '–'}{cons ? ` · ${cons}` : ''}</div></div>
-              <div className="hist">{e.ratingDist.map((c, i) => <div key={i} data-tip={`${c} colleague${c === 1 ? '' : 's'} rated ${i + 1}`}><i style={{ height: Math.max(2, c / maxd * 48) }} /><span>{i + 1}</span></div>)}</div>
-            </div>
+            <div className="lab"><span>Who you meet there</span><span>fit 1–5 from the masterlist</span></div>
+            <div className="fitrows">{GROUPS.map((n, i) => (
+              <div key={n} className={`fitrow ${i === group ? 'me' : ''}`}><span>{n}</span><span className="track"><i style={{ width: `${(e.fit[i] || 0) * 20}%` }} /></span><b>{e.fit[i] ?? '–'}</b></div>
+            ))}</div>
           </section>
         )}
+        <section className="sec">
+          <div className="lab"><span>Details</span></div>
+          <div className="facts">
+            <div className="fact"><span>Audience</span><b>{e.audience || 'n/a'}{e.size ? ` (${e.size})` : ''}</b></div>
+            <div className="fact"><span>Ticket</span><b>{e.costTicket || 'n/a'}</b></div>
+            <div className="fact"><span>Type</span><b>{e.kind || 'n/a'}</b></div>
+            <div className="fact"><span>Team rating</span><b>{e.ratingN > 0 && e.ratingAvg != null ? `${Number(e.ratingAvg).toFixed(1)} / 5 from ${e.ratingN} colleagues` : 'not rated'}</b></div>
+          </div>
+        </section>
         {done.length > 0 && (
           <section className="sec">
-            <div className="lab"><span>Results</span><span>from {done.length} debrief{done.length > 1 ? 's' : ''}</span></div>
+            <div className="lab"><span>How it went</span><span>{done.length} debrief{done.length > 1 ? 's' : ''}</span></div>
             <div className="facts">
-              <div className="fact"><span>Leads</span><b className="num" style={{ fontSize: 30 }}>{done.reduce((a, r) => a + (r.leads || 0), 0)}</b></div>
-              <div className="fact"><span>Rating</span><b className="num" style={{ fontSize: 30 }}>{(done.reduce((a, r) => a + (r.rating || 0), 0) / done.length).toFixed(1)}</b></div>
+              <div className="fact"><span>Leads</span><b className="num" style={{ fontSize: 26 }}>{done.reduce((a, r) => a + (r.leads || 0), 0)}</b></div>
+              <div className="fact"><span>Rating</span><b className="num" style={{ fontSize: 26 }}>{(done.reduce((a, r) => a + (r.rating || 0), 0) / done.length).toFixed(1)}</b></div>
             </div>
             {done.filter(r => r.debriefNote).map(r => <p key={r.id} className="note" style={{ marginTop: 10 }}><b>{people.get(r.personId)?.name} · go again: {r.goAgain}</b>{r.debriefNote}</p>)}
           </section>
         )}
-        {(e.notes || e.history || e.comment) && (
+        {(e.notes || e.history || e.comment || e.costSponsor || e.focus) && (
           <section className="sec">
-            <div className="lab"><span>From the masterlist</span></div>
-            {e.notes && <p className="note"><b>Notes</b>{e.notes}</p>}
-            {e.history && <p className="note"><b>Plan / activity so far</b>{e.history}</p>}
-            {e.comment && <p className="note"><b>Comment (Uraitz)</b>{e.comment}</p>}
+            <details className="more"><summary>More from the masterlist</summary>
+              {e.focus && <p className="note"><b>Focus</b>{e.focus}</p>}
+              {e.costSponsor && <p className="note"><b>Sponsorship</b>{e.costSponsor}</p>}
+              {e.notes && <p className="note"><b>Notes</b>{e.notes}</p>}
+              {e.history && <p className="note"><b>Plan / activity so far</b>{e.history}</p>}
+              {e.comment && <p className="note"><b>Comment (Uraitz)</b>{e.comment}</p>}
+            </details>
           </section>
         )}
         {staff && (
           <section className="sec">
-            <div className="lab"><span>Events team</span></div>
+            <div className="lab"><span>For the events team</span></div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button className={`btn ${flag ? '' : 'line'}`} disabled={busy} onClick={() => act('flag_set', { p_event: e.id, p_on: !flag, p_note: '' }, flag ? 'Flag removed' : 'Flagged: sales see “we need someone here”')}><IcFlag />{flag ? 'Remove flag' : 'Flag: we need someone here'}</button>
-              <button className="btn line" onClick={() => open({ kind: 'event', id: e.id, view: 'assign' })}><IcUsers />Send someone</button>
-              <button className="btn line" onClick={() => open({ kind: 'edit', id: e.id })}><IcEdit />Edit event</button>
+              <button className="btn line sm" disabled={busy} onClick={() => act('flag_set', { p_event: e.id, p_on: !flag, p_note: '' }, flag ? 'Flag removed' : 'Flagged: sales see “Roman wants someone”')}><IcFlag s={14} />{flag ? 'Remove flag' : 'We need someone here'}</button>
+              <button className="btn line sm" onClick={() => open({ kind: 'event', id: e.id, view: 'assign' })}><IcUsers s={14} />Send someone</button>
+              <button className="btn line sm" onClick={() => open({ kind: 'edit', id: e.id })}><IcEdit s={14} />Edit event</button>
             </div>
           </section>
         )}
       </div>
       <footer className="dr-f">
         {mine ? <>
-          <span className="hint">{mine.status === 'approved' ? <>You’re going. <b>Approved</b>.</> : <>You requested this. <b>Waiting</b> for the events team.</>}</span>
+          <span className="hint">{mine.status === 'approved' ? <><b>You’re going.</b> Approved.</> : <><b>Requested.</b> Waiting for Roman.</>}</span>
           {mine.status === 'requested' && <button className="btn line" onClick={() => open({ kind: 'event', id: e.id, view: 'edit-request', rid: mine.id })}>Change</button>}
           <Link className="btn" href="/my">My events</Link>
         </> : e.past ? <span className="hint">This event is over.</span>
-          : <button className="btn red lg" data-autofocus onClick={() => open({ kind: 'event', id: e.id, view: 'request' })}>Request to attend</button>}
+          : <button className="btn red lg" data-autofocus onClick={() => open({ kind: 'event', id: e.id, view: 'request' })}>Request a spot</button>}
       </footer>
     </>
   );
@@ -195,22 +190,22 @@ function RequestForm({ e, rid }: { e: Ev; rid?: string }) {
     <>
       <Head e={e} back={() => open({ kind: 'event', id: e.id, view: 'detail' })} />
       <form className="dr-b" id="reqForm" onSubmit={submit} noValidate>
-        <div className="q"><span className="ql">How will you be there?</span>
+        <div className="q"><span className="ql"><span className="no">1</span>How do you go?</span>
           <div className="opts">{(Object.keys(MODES) as Mode[]).map(k => <button type="button" key={k} className="opt" aria-pressed={mode === k} onClick={() => setMode(k)}><b>{MODES[k][0]}</b><span>{MODES[k][1]}</span></button>)}</div></div>
-        <div className="q"><span className="ql">Ticket</span>
+        <div className="q"><span className="ql"><span className="no">2</span>Ticket</span>
           <div className="opts">{(Object.keys(TICKETS) as Ticket[]).map(k => <button type="button" key={k} className="opt" aria-pressed={ticket === k} onClick={() => setTicket(k)}><b>{TICKETS[k][0]}</b><span>{TICKETS[k][1]}</span></button>)}</div>
           {ticket === 'paid' && <div className="field" style={{ marginTop: 12 }}><label htmlFor="cost">Estimated cost (CHF)</label><input id="cost" className="input" type="number" min={0} step={50} inputMode="numeric" value={cost} onChange={x => setCost(x.target.value)} placeholder="e.g. 1500" /><span className="dim small">Masterlist: {e.costTicket || 'no price noted'}</span></div>}
         </div>
-        <div className="q"><span className="ql">Who do you want to meet?</span>
+        <div className="q"><span className="ql"><span className="no">3</span>Who do you want to meet?</span>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{GROUPS.map((n, i) => <button type="button" key={n} className="chip" aria-pressed={groups.includes(i)} onClick={() => setGroups(g => g.includes(i) ? g.filter(x => x !== i) : [...g, i].sort())}>{n}<span className="n">{e.fit[i] ?? '–'}</span></button>)}</div></div>
-        <div className="q"><span className="ql">Meetings you plan to book</span>
+        <div className="q"><span className="ql"><span className="no">4</span>Meetings you plan</span>
           <div className="stepper"><button type="button" onClick={() => setMeet(m => Math.max(0, m - 1))} aria-label="Fewer">−</button><output>{meet}</output><button type="button" onClick={() => setMeet(m => Math.min(500, m + 1))} aria-label="More">+</button></div></div>
-        <div className="q"><label className="ql" htmlFor="why">Why this event?<span className="qh">{strict ? 'Required for Tier 4–5' : 'Optional, helps the events team decide'}</span></label>
+        <div className="q"><label className="ql" htmlFor="why"><span className="no">5</span>Why this event?<span className="qh">{strict ? 'needed for Tier 4–5' : 'optional'}</span></label>
           <textarea id="why" className="area" value={why} onChange={x => setWhy(x.target.value)} placeholder="Pre-booked meetings, clients attending, a speaking slot…" maxLength={2000} />
           {err && <p className="err" style={{ marginTop: 8 }}>{err}</p>}</div>
         {hints.length > 0 && <div className="q"><span className="ql">Good to know</span><div className="hints">{hints.map((h, i) => <div key={i} className={`hint-i ${h[0]}`}>{h[0] === 'warn' ? <IcWarn /> : h[0] === 'good' ? <IcCheck /> : <IcUsers />}<span>{h[1]}</span></div>)}</div></div>}
       </form>
-      <footer className="dr-f"><button type="submit" form="reqForm" className="btn red lg" disabled={busy} data-autofocus>{busy ? 'Sending…' : existing ? 'Save changes' : 'Send request'}</button></footer>
+      <footer className="dr-f"><button type="submit" form="reqForm" className="btn red lg" disabled={busy} data-autofocus>{busy ? 'Sending…' : existing ? 'Save changes' : 'Send request to Roman'}</button></footer>
     </>
   );
 }
@@ -223,7 +218,7 @@ function Sent({ e }: { e: Ev }) {
       <div className="dr-b">
         <div className="done-box">
           <div className="tick"><IcCheck s={28} /></div>
-          <div><h3 className="h2">Request sent</h3><p className="muted" style={{ marginTop: 6 }}>The events team sees it in their inbox. Once it’s approved it’s official: you go in the name of Bitcoin Suisse.</p></div>
+          <div><h3 className="h2">Request sent</h3><p className="muted" style={{ marginTop: 6 }}>Roman sees it in his inbox. Once he approves, it’s official: you go in the name of Bitcoin Suisse.</p></div>
           <div className="steps">
             <div className="stp done"><i><IcCheck s={13} /></i><div><b>Request</b><span>Sent just now</span></div></div>
             <div className="stp"><i>2</i><div><b>Approval</b><span>Policy, ticket and who else goes, in one view</span></div></div>

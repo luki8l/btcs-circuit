@@ -54,9 +54,8 @@ export default function Season({ events, hit, from, to, big }: { events: Ev[]; h
         {L.lanes.map((ln, i) => (
           <g key={ln.t}>
             {i % 2 === 0 && <rect className="band" x={0} y={r1(ln.y)} width={L.W} height={r1(ln.h)} />}
-            <text className="tl" x={14} y={r1(ln.y + ln.h / 2 + 2)}>{ln.t ? `T${ln.t}` : '–'}</text>
-            <text className="ts" x={50} y={r1(ln.y + ln.h / 2 - 3)}>{ln.t ? POLICY[ln.t][0] : 'Unrated'}</text>
-            <text className="ts" x={50} y={r1(ln.y + ln.h / 2 + 11)}>{ln.n} events</text>
+            <text className="tl" x={14} y={r1(ln.y + ln.h / 2 - 2)}>{ln.t ? `Tier ${ln.t}` : 'Not rated'}</text>
+            <text className="ts" x={14} y={r1(ln.y + ln.h / 2 + 13)}>{ln.t ? `${POLICY[ln.t][0]} · ${ln.n}` : `${ln.n} events`}</text>
           </g>
         ))}
         {L.months.map((m, i) => {
@@ -70,7 +69,7 @@ export default function Season({ events, hit, from, to, big }: { events: Ev[]; h
           );
         })}
         {L.hasTbd && <g><line className="grid" x1={L.W - L.padR - L.tbdW} x2={L.W - L.padR - L.tbdW} y1={L.top - 30} y2={L.H} /><text className="mlab" x={L.W - L.padR - L.tbdW + 8} y={L.top - 20}>TBD</text></g>}
-        {tx != null && <g><line className="today" x1={tx} x2={tx} y1={L.top - 30} y2={L.H} /><text className="today-l" x={tx + 5} y={L.H - 8}>TODAY</text></g>}
+        {tx != null && <g><line className="today" x1={tx} x2={tx} y1={L.top - 2} y2={L.H} /><text className="today-l" x={tx + 5} y={L.H - 8}>TODAY</text></g>}
         {L.lanes.map(ln => ln.items.map(it => {
           const e = it.e, cy = r1(ln.y + ln.h / 2 + it.y), cx = r1(it.x), pr = presence(e.id);
           const on = hit.has(e.id);

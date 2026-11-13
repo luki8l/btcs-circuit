@@ -27,3 +27,4 @@ export const IcLink = (p: P) => <I {...p}><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 
 export const IcEdit = (p: P) => <I {...p}><path d="M4 20h4L19 9l-4-4L4 16z" /><path d="M14 6l4 4" /></I>;
 export const IcHub = (p: P) => <I {...p}><circle cx="12" cy="12" r="3" /><circle cx="5" cy="5" r="2" /><circle cx="19" cy="5" r="2" /><circle cx="5" cy="19" r="2" /><circle cx="19" cy="19" r="2" /><path d="M7 7l3 3M17 7l-3 3M7 17l3-3M17 17l-3-3" /></I>;
 export const IcChevDown = (p: P) => <I {...p}><path d="M6 9l6 6 6-6" /></I>;
+export const IcChart = (p: P) => <I {...p}><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></I>;
