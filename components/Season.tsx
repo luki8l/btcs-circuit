@@ -88,3 +88,30 @@ export default function Season({ events, hit, from, to, big }: { events: Ev[]; h
     </div>
   );
 }
+
+/** what the marks on the season map mean: drawn with the same shapes and colours as the map itself */
+export function SeasonLegend({ flags = true }: { flags?: boolean }) {
+  const G = ({ children, w = 22 }: { children: React.ReactNode; w?: number }) => <svg width={w} height="18" viewBox={`0 0 ${w} 18`} aria-hidden="true">{children}</svg>;
+  const dot = (t: number, r = 5) => <G><circle className={`m f${t}`} cx="11" cy="9" r={r} /></G>;
+  const ring = (cls: string) => <G><circle className={cls} cx="11" cy="9" r="7.5" /><circle className="m f3" cx="11" cy="9" r="4.5" /></G>;
+  return (
+    <div className="season legend sl" role="list" aria-label="Legend">
+      <div className="sl-g" role="listitem"><b>Tier</b>
+        {[1, 2, 3, 4, 5].map(t => <span key={t}>{dot(t)}{t} · {POLICY[t][0]}</span>)}
+        <span>{dot(0)}Not rated</span>
+      </div>
+      <div className="sl-g" role="listitem"><b>Size</b>
+        <span><G w={46}><circle className="m f4" cx="6" cy="9" r="3.4" /><circle className="m f4" cx="19" cy="9" r="5.4" /><circle className="m f4" cx="36" cy="9" r="8" /></G>Audience S → XL</span>
+      </div>
+      <div className="sl-g" role="listitem"><b>Bitcoin Suisse</b>
+        <span>{ring('ring')}Someone approved</span>
+        <span>{ring('ring req')}Request waiting</span>
+        {flags && <span>{ring('ring flag')}Roman wants someone</span>}
+      </div>
+      <div className="sl-g" role="listitem"><b>Time</b>
+        <span><G><circle className="m f3" cx="11" cy="9" r="5" opacity=".4" /></G>Already over</span>
+        <span><G w={14}><line className="today" x1="7" x2="7" y1="1" y2="17" /></G>Today</span>
+      </div>
+    </div>
+  );
+}

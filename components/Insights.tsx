@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useMemo } from 'react';
 import { useApp, h } from './AppProvider';
 import { Tier, DateBlock, Av, Blank } from './ui';
-import Season from './Season';
+import Season, { SeasonLegend } from './Season';
 import ReportMenu from './ReportMenu';
 import TeamBreakdown from './TeamBreakdown';
 import { IcInfo, IcFlag, IcChart } from './icons';
@@ -46,8 +46,9 @@ export default function Insights() {
       </div>
 
       <section className="panel" style={{ marginBottom: 14 }}>
-        <div className="panel-h"><div><h2 className="h2">The season ahead</h2><p>Every dot is an upcoming event: rows are the tiers, left to right is time, bigger dots mean bigger audiences. A black ring means someone from Bitcoin Suisse is going.</p></div>
+        <div className="panel-h"><div><h2 className="h2">The season ahead</h2><p>Every dot is an upcoming event, by tier (rows) and date (left to right). Hover a dot for details, click to open it.</p></div>
           <Link className="btn line sm" href="/discover?view=year">Open full view</Link></div>
+        <SeasonLegend flags={data.flags.length > 0} />
         <Season events={events} hit={all} from={cur} to={m1} />
       </section>
 

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from './AppProvider';
-import Season from './Season';
+import Season, { SeasonLegend } from './Season';
 import Calendar from './Calendar';
 import { Tier, DateBlock, Av, Dropdown, Blank } from './ui';
 import { IcSearch, IcX, IcExpand, IcCollapse, IcDots, IcGrid, IcList, IcPlus, IcFlag, IcCheck } from './icons';
@@ -130,15 +130,10 @@ export default function Discover() {
     </div>
   );
   const fullBtn = <button className="btn line sm" onClick={() => setFull(x => !x)}>{full ? <><IcCollapse />Close full screen</> : <><IcExpand />Full screen</>}</button>;
-  const legend = (
-    <div className="legend">
-      {[1, 2, 3, 4, 5].map(t => <span key={t}><i className="lg-dot" style={{ background: `var(--t${t})` }} />Tier {t}</span>)}
-      <span><i className="lg-ring" />Someone going</span><span><i className="lg-ring req" />Waiting</span>{data.flags.length > 0 && <span><i className="lg-ring flag" />Roman wants someone</span>}
-    </div>
-  );
+  const legend = <SeasonLegend flags={data.flags.length > 0} />;
   const year = (big: boolean) => (
     <div className="panel" style={{ padding: big ? 16 : '18px 18px 10px' }}>
-      {!big && <div className="panel-h"><div><h2 className="h2">The year at a glance</h2><p>Every dot is an event. Rows are the tiers, left to right is time, bigger dots mean bigger audiences. Click a dot to open it.</p></div><div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>{fullBtn}</div></div>}
+      {!big && <div className="panel-h"><div><h2 className="h2">The year at a glance</h2><p>Every dot is an event, by tier (rows) and date (left to right). Hover a dot for details, click to open it.</p></div><div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>{fullBtn}</div></div>}
       <div style={{ marginBottom: 10 }}>{legend}</div>
       <Season events={events} hit={hit} from={Math.min(from, to)} to={Math.max(from, to)} big={big} />
     </div>
