@@ -58,7 +58,7 @@ const MANAGEMENT: Step[] = [
   { path: '/insights', el: ['.kpis'], title: 'The headline numbers', text: 'Upcoming events, how many key events (Tier 1–2) we cover, approved trips, ticket budget and the leads from the debriefs.' },
   { path: '/insights', el: ['.season-wrap'], title: 'The season ahead', text: 'Every dot is an event. Rows are the tiers, left to right is time, bigger dots mean bigger audiences. A black ring means someone from Bitcoin Suisse is going. Hover a dot for details.' },
   { path: '/insights', el: ['#gaps'], title: 'The gaps', text: 'Key events where nobody from us goes yet. “Flagged” means Roman has asked sales to cover it.' },
-  { path: '/insights', el: ['#by-team'], title: 'By team', text: 'Trips, open debriefs, leads, rating and budget for each sales team.' },
+  { path: '/insights', el: ['#by-team'], title: 'By team and person', text: 'Trips, open debriefs, leads, rating and budget for each sales team. Click a team to see its people, click a person to see their events. “By person” ranks everyone.' },
   { path: '/insights', el: ['#results'], title: 'Results per event', text: 'Leads, meetings, rating and “go again” from the 60-second debriefs after each event. This replaces the yearly rating round in Excel.' },
   { path: '/insights', el: ['.report-dl'], title: 'Take it with you', text: 'Download a two-page PDF report for a meeting, or everything as Excel to filter and sort yourself.' },
   { path: '/approvals', el: ['.tabs'], title: 'Requests', text: 'Every request and Roman’s decision, with his note. You see everything but don’t have to approve anything. The number on the tab shows what is waiting.' },

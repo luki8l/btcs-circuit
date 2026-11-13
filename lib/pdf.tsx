@@ -1,5 +1,6 @@
 // The PDF management report: two to three A4 pages a CEO can read in five minutes.
 import { Document, Page, View, Text, Image, StyleSheet, Font, renderToBuffer } from '@react-pdf/renderer';
+import type { Style } from '@react-pdf/types';
 import { MODES, chf, place, ymd, MS, type Ev } from './model';
 import type { Report } from './report';
 
@@ -38,13 +39,13 @@ const s = StyleSheet.create({
 });
 
 type C<T> = { h: string; w: number | string; r?: boolean; v: (x: T) => React.ReactNode };
-function Table<T>({ cols, rows, empty }: { cols: C<T>[]; rows: T[]; empty: string }) {
+function Table<T>({ cols, rows, empty, rowStyle }: { cols: C<T>[]; rows: T[]; empty: string; rowStyle?: (x: T) => Style }) {
   if (!rows.length) return <Text style={s.empty}>{empty}</Text>;
   return (
     <>
       <View style={s.th}>{cols.map(c => <Text key={c.h} style={[s.thc, { width: c.w }, c.r ? s.r : {}]}>{c.h}</Text>)}</View>
       {rows.map((x, i) => (
-        <View key={i} style={s.tr} wrap={false}>
+        <View key={i} style={[s.tr, rowStyle ? rowStyle(x) : {}]} wrap={false}>
           {cols.map(c => { const v = c.v(x); return <View key={c.h} style={[s.td, { width: c.w }]}>{typeof v === 'string' || typeof v === 'number' ? <Text style={c.r ? s.r : {}}>{v}</Text> : v}</View>; })}
         </View>
       ))}
@@ -63,6 +64,12 @@ const Name = ({ e, sub }: { e: Ev; sub?: string }) => <View><Text style={s.b}>{e
 
 function ReportDoc({ R, by, logo }: { R: Report; by: string; logo: Buffer | null }) {
   const K = R.kpi, gen = new Date();
+  const breakdown = R.teams.flatMap(t => [
+    { ...t, team: true, name: t.t, size: `${t.members.length} ${t.members.length === 1 ? 'person' : 'people'}` },
+    ...t.members.map(p => ({ ...p, team: false, name: p.name + (p.active ? '' : ' (inactive)'), size: '' })),
+  ]);
+  // page 1 holds the numbers, the breakdown and as many gaps as fit (rows are about 20 / 17 / 34 pt high)
+  const gapsN = Math.max(3, Math.min(8, Math.floor((762 - 305 - R.teams.length * 20 - R.persons.length * 17) / 34)));
   const stamp = `${gen.getDate()} ${MS[gen.getMonth()]} ${gen.getFullYear()}`;
   const Foot = () => <View style={s.foot} fixed><Text>Bitcoin Suisse · Internal · Circuit external events report · {ymd(gen)}</Text><Text render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} /></View>;
   return (
@@ -83,22 +90,23 @@ function ReportDoc({ R, by, logo }: { R: Report; by: string; logo: Buffer | null
         </View>
 
         <View style={s.sect}>
-          <Text style={s.h2}>By team</Text><Text style={s.lede}>Trips, results and budget per sales team. Leads and ratings come from the 60-second debriefs.</Text>
-          <Table rows={R.teams} empty="No sales teams yet." cols={[
-            { h: 'Team', w: '22%', v: t => <Text style={s.b}>{t.t}</Text> }, { h: 'Sales', w: '9%', r: true, v: t => t.people || '–' }, { h: 'Trips ahead', w: '12%', r: true, v: t => t.ahead || '–' },
-            { h: 'Waiting', w: '10%', r: true, v: t => t.waiting || '–' }, { h: 'Done', w: '9%', r: true, v: t => t.went || '–' }, { h: 'Debrief due', w: '11%', r: true, v: t => t.due ? <Text style={[s.r, { color: REDINK }]}>{t.due}</Text> : '–' },
-            { h: 'Leads', w: '9%', r: true, v: t => <Text style={[s.r, s.b]}>{t.leads || '–'}</Text> }, { h: 'Rating', w: '8%', r: true, v: t => t.rating != null ? t.rating.toFixed(1) : '–' },
-            { h: 'Budget', w: '10%', r: true, v: t => t.spend ? chf(t.spend) : '–' },
+          <Text style={s.h2}>By team and person</Text><Text style={s.lede}>Trips, results and budget per sales team and person, most leads first. Leads and ratings come from the 60-second debriefs.</Text>
+          <Table rows={breakdown} empty="No sales people yet." rowStyle={x => x.team ? { backgroundColor: '#FAFAF8' } : { paddingVertical: 3.5 }} cols={[
+            { h: 'Team / person', w: '27%', v: x => x.team ? <Text style={s.b}>{x.name} <Text style={[s.dim, { fontFamily: 'Helvetica' }]}> {x.size}</Text></Text> : <Text style={{ paddingLeft: 10, color: INK2 }}>{x.name}</Text> },
+            { h: 'Trips ahead', w: '10%', r: true, v: x => x.ahead || '–' }, { h: 'Waiting', w: '9%', r: true, v: x => x.waiting || '–' },
+            { h: 'Done', w: '8%', r: true, v: x => x.went || '–' }, { h: 'Debrief due', w: '9%', r: true, v: x => x.due ? <Text style={[s.r, { color: REDINK }]}>{x.due}</Text> : '–' },
+            { h: 'Leads', w: '8%', r: true, v: x => <Text style={[s.r, x.team ? s.b : {}]}>{x.leads || '–'}</Text> }, { h: 'Per event', w: '9%', r: true, v: x => x.perEvent != null ? x.perEvent.toFixed(1) : '–' },
+            { h: 'Rating', w: '8%', r: true, v: x => x.rating != null ? x.rating.toFixed(1) : '–' }, { h: 'Budget', w: '12%', r: true, v: x => x.spend ? chf(x.spend) : '–' },
           ]} />
         </View>
 
         <View style={s.sect}>
           <View wrap={false}><Text style={s.h2}>Key events nobody covers yet</Text><Text style={s.lede}>Upcoming Tier 1–2 events without a request. “Flagged” means Roman has asked sales for someone.</Text></View>
-          <Table rows={R.gaps.slice(0, 8)} empty="Every upcoming key event has someone from Bitcoin Suisse." cols={[
+          <Table rows={R.gaps.slice(0, gapsN)} empty="Every upcoming key event has someone from Bitcoin Suisse." cols={[
             { h: 'Date', w: '17%', v: g => day(g.e) }, { h: 'Event', w: '55%', v: g => <Name e={g.e} /> }, { h: 'Tier', w: '14%', v: g => <TierTag e={g.e} /> },
             { h: '', w: '14%', r: true, v: g => g.flagged ? <Text style={[s.r, { color: REDINK }]}>Flagged</Text> : '' },
           ]} />
-          {R.gaps.length > 8 && <Text style={[s.dim, { marginTop: 4 }]}>+ {R.gaps.length - 8} more in the Excel export (sheet “Coverage gaps”).</Text>}
+          {R.gaps.length > gapsN && <Text style={[s.dim, { marginTop: 4 }]}>+ {R.gaps.length - gapsN} more in the Excel export (sheet “Coverage gaps”).</Text>}
         </View>
         <View style={s.sect} break>
           <Text style={s.h2}>Coverage by region</Text><Text style={s.lede}>Upcoming Tier 1–3 events with someone from Bitcoin Suisse approved.</Text>

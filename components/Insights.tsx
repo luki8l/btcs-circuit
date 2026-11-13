@@ -7,6 +7,7 @@ import { useApp, h } from './AppProvider';
 import { Tier, DateBlock, Av, Blank } from './ui';
 import Season from './Season';
 import ReportMenu from './ReportMenu';
+import TeamBreakdown from './TeamBreakdown';
 import { IcInfo, IcFlag, IcChart } from './icons';
 import { MS, ML, REGION_LABEL, chf, dateLabel, place, mIdx, canSeeInsights, isStaff } from '@/lib/model';
 import { buildReport } from '@/lib/report';
@@ -27,7 +28,6 @@ export default function Insights() {
   const maxc = Math.max(1, ...cols.map(m => inMonth(m).length));
   const regs = R.regions.map(x => [x.region, x.covered, x.total] as const);
   const results = R.results.map(x => x.r);
-  const byTeam = R.teams;
 
   return (
     <main className="page">
@@ -78,24 +78,7 @@ export default function Insights() {
         </section>
       </div>
 
-      <section className="sect" id="by-team">
-        <h2 className="h2">By team</h2><p className="lede">Trips, results and budget per sales team. Leads and ratings come from the debriefs.</p>
-        <div className="card scroll-x"><table className="tbl">
-          <thead><tr><th>Team</th><th className="r">Sales</th><th className="r">Trips ahead</th><th className="r">Waiting</th><th className="r">Events done</th><th className="r">Leads</th><th>Avg. rating</th><th className="r">Ticket budget</th></tr></thead>
-          <tbody>{byTeam.map(x => (
-            <tr key={x.t}>
-              <td><b>{x.t}</b></td>
-              <td className="r">{x.people || <span className="dim">–</span>}</td>
-              <td className="r">{x.ahead || <span className="dim">–</span>}</td>
-              <td className="r">{x.waiting || <span className="dim">–</span>}</td>
-              <td className="r">{x.went ? <>{x.went}{x.due > 0 && <span className="pill red" style={{ marginLeft: 8 }}>{x.due} debrief{x.due > 1 ? 's' : ''} due</span>}</> : <span className="dim">–</span>}</td>
-              <td className="r"><b>{x.leads || <span className="dim">–</span>}</b></td>
-              <td>{x.rating != null ? <span className="dots5" data-tip={`${x.rating.toFixed(1)} / 5`}>{'●'.repeat(Math.round(x.rating))}<em>{'●'.repeat(5 - Math.round(x.rating))}</em></span> : <span className="dim">–</span>}</td>
-              <td className="r">{x.spend ? chf(x.spend) : <span className="dim">–</span>}</td>
-            </tr>
-          ))}</tbody>
-        </table></div>
-      </section>
+      <TeamBreakdown R={R} />
 
       <section className="sect" id="results">
         <h2 className="h2">Results per event</h2><p className="lede">Leads, meetings and “would go again” from the 60-second debriefs. This replaces the yearly rating round for the 2028 tiers.</p>

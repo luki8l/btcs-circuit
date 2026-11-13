@@ -54,13 +54,22 @@ export async function buildXlsx(R: Report, by: string): Promise<Buffer> {
   const rh = sum.getRow(rr + 1); ['Region', 'With someone', 'Events'].forEach((t, i) => { const c = rh.getCell(i + 1); c.value = t; c.font = { bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF141414' } }; });
   R.regions.forEach((g, k) => { const row = sum.getRow(rr + 2 + k); row.getCell(1).value = g.label; row.getCell(2).value = g.covered; row.getCell(3).value = g.total; });
 
-  // 2 by team
+  // 2 by team, 3 by person
   sheet(wb, 'By team', [
     { header: 'Team', width: 18 }, { header: 'Sales', width: 9 }, { header: 'Trips ahead', width: 12 }, { header: 'Waiting', width: 10 }, { header: 'Events done', width: 12 },
-    { header: 'Debriefs due', width: 13 }, { header: 'Leads', width: 9 }, { header: 'Avg. rating (1–5)', width: 16, fmt: DEC }, { header: 'Ticket budget', width: 15, fmt: CHF },
-  ], R.teams.map(t => [t.t, t.people, t.ahead, t.waiting, t.went, t.due, t.leads, t.rating, t.spend]));
+    { header: 'Debriefs due', width: 13 }, { header: 'Leads', width: 9 }, { header: 'Leads per event', width: 14, fmt: DEC }, { header: 'Avg. rating (1–5)', width: 16, fmt: DEC }, { header: 'Ticket budget', width: 15, fmt: CHF },
+  ], R.teams.map(t => [t.t, t.people, t.ahead, t.waiting, t.went, t.due, t.leads, t.perEvent, t.rating, t.spend]));
+  const nextOf = (rs: Row[]) => rs.filter(x => x.r.status === 'approved' && !x.e.past && !(x.e.sd && x.e.mode !== 'tbd' && x.e.sd <= R.today)).sort((a, b) => (a.e.sd ? +a.e.sd : 9e15) - (b.e.sd ? +b.e.sd : 9e15))[0];
+  const lastOf = (rs: Row[]) => rs.filter(x => x.r.status === 'approved' && (x.e.past || (x.e.sd && x.e.mode !== 'tbd' && x.e.sd <= R.today))).sort((a, b) => (b.e.sd ? +b.e.sd : 0) - (a.e.sd ? +a.e.sd : 0))[0];
+  sheet(wb, 'By person', [
+    { header: 'Person', width: 22 }, { header: 'Team', width: 14 }, { header: 'Market', width: 14 }, { header: 'Trips ahead', width: 12 }, { header: 'Waiting', width: 10 }, { header: 'Events done', width: 12 },
+    { header: 'Debriefs due', width: 13 }, { header: 'Leads', width: 9 }, { header: 'Leads per event', width: 14, fmt: DEC }, { header: 'Avg. rating (1–5)', width: 16, fmt: DEC }, { header: 'Ticket budget', width: 15, fmt: CHF },
+    { header: 'Next trip', width: 34 }, { header: 'Next trip date', width: 13, fmt: DATE }, { header: 'Last event', width: 34 }, { header: 'Last event date', width: 13, fmt: DATE },
+  ], R.persons.map(p => { const n = nextOf(p.rows), l = lastOf(p.rows); return [p.name + (p.active ? '' : ' (inactive)'), p.team, p.market || null, p.ahead, p.waiting, p.went, p.due, p.leads, p.perEvent, p.rating, p.spend,
+    n?.e.name ?? null, n ? d(n.e.sd) : null, l?.e.name ?? null, l ? d(l.e.sd) : null]; }),
+    'Every sales person (and colleagues from other teams who travel), most leads first.');
 
-  // 3 every request with its decision and result
+  // 4 every request with its decision and result
   const all = [...R.rows].sort((a, b) => (a.e.sd ? +a.e.sd : 9e15) - (b.e.sd ? +b.e.sd : 9e15));
   const reqRow = (x: Row) => {
     const { r, e, p } = x, by = r.decidedBy ? R.people.get(r.decidedBy)?.name : '';
