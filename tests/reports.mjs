@@ -16,14 +16,16 @@ async function as([email, pw]) {
   if (await p.waitForSelector('.tour-offer', { timeout: 2500 }).catch(() => null)) await p.click('.tour-offer >> text=Not now');
   return p;
 }
-const anon = await b.newContext();
-ok([401, 403, 307].includes((await anon.request.get(BASE + '/api/report?format=pdf', { maxRedirects: 0 })).status()), 'not signed in: no report');
+// status codes via fetch in the page (works behind proxies, unlike a separate request context)
+const status = (p, url) => p.evaluate(u => fetch(u, { redirect: 'manual' }).then(r => r.status), url);
+const anon = await (await b.newContext()).newPage(); await anon.goto(BASE + '/login');
+ok([0, 401, 403, 307].includes(await status(anon, BASE + '/api/report?format=pdf')), 'not signed in: no report');
 const sales = await as(USERS.sales);
-ok((await sales.context().request.get(BASE + '/api/report?format=xlsx')).status() === 403, 'sales: no report (403)');
+ok((await status(sales, BASE + '/api/report?format=xlsx')) === 403, 'sales: no report (403)');
 ok(!(await sales.$('.report-dl')), 'sales: no download button');
 for (const role of ['management', 'events']) {
   const p = await as(USERS[role]);
-  ok((await p.context().request.get(BASE + '/api/report?format=doc')).status() === 400, `${role}: unknown format → 400`);
+  ok((await status(p, BASE + '/api/report?format=doc')) === 400, `${role}: unknown format → 400`);
   await p.goto(BASE + '/insights'); await p.waitForSelector('.kpis');
   const kpis = await p.$$eval('.kpi', ks => ks.map(k => k.querySelector('b').textContent.replace(/\s+/g, ' ').trim()));
   fs.writeFileSync(`${OUT}kpis-${role}.json`, JSON.stringify(kpis));
