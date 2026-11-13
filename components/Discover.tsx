@@ -197,7 +197,8 @@ export default function Discover() {
         {view === 'list' && <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>Sort by<select className="select sm" style={{ width: 190 }} value={sort} onChange={e => setSort(e.target.value as typeof sort)}><option value="date">Date</option><option value="tier">Tier</option><option value="fit">Fit for {GS[group]}</option></select></label>}
       </div>}
 
-      {view === 'list' && <List list={list} grouped={sort === 'date'} reset={() => setF(NO_FILTERS)} />}
+      {view === 'list' && <List list={list} grouped={sort === 'date'} reset={() => setF(NO_FILTERS)}
+        past={f.when === 'upcoming' && !hit.size ? events.filter(e => e.past && matches(e, { ...f, when: 'past' }, presence(e.id))).length : 0} showPast={() => setF({ ...f, when: 'past', from: '', to: '' })} />}
       {view === 'calendar' && <Calendar events={calEvents} month={calMonth} setMonth={setCalMonth} tools={fullBtn} />}
       {view === 'year' && year(false)}
 
@@ -221,9 +222,11 @@ export default function Discover() {
   );
 }
 
-function List({ list, grouped, reset }: { list: Ev[]; grouped: boolean; reset: () => void }) {
+function List({ list, grouped, reset, past = 0, showPast }: { list: Ev[]; grouped: boolean; reset: () => void; past?: number; showPast?: () => void }) {
   const { open, presence, people, me } = useApp();
-  if (!list.length) return <div className="card"><Blank icon={<IcSearch s={22} />} title="No events match" text="Try fewer filters or another search." action={<button className="btn" onClick={reset}>Show all upcoming events</button>} /></div>;
+  if (!list.length) return <div className="card">{past > 0
+    ? <Blank icon={<IcSearch s={22} />} title="No upcoming events match" text={`${past} past event${past > 1 ? 's' : ''} match${past > 1 ? '' : 'es'}. Went to one of them? Open it and press “I was there”.`} action={<span style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}><button className="btn red" onClick={showPast}>Show {past} past event{past > 1 ? 's' : ''}</button><button className="btn" onClick={reset}>All upcoming events</button></span>} />
+    : <Blank icon={<IcSearch s={22} />} title="No events match" text="Try fewer filters or another search." action={<button className="btn" onClick={reset}>Show all upcoming events</button>} />}</div>;
   const row = (e: Ev) => {
     const p = presence(e.id), all = [...p.approved, ...p.requested], mine = all.find(r => r.personId === me.id);
     return (

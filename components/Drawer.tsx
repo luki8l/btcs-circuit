@@ -179,7 +179,8 @@ function RequestForm({ e, rid }: { e: Ev; rid?: string }) {
   if (past) hints.push(['', 'Roman confirms that you were there. Then it shows up in My events for the 60-second debrief with your leads.']);
   else if (strict) hints.push(['warn', `Tier ${e.tk}: the policy says don’t go. Add a reason so the events team can make an exception.`]);
   else if (e.tk) hints.push(['good', `Fits the policy for Tier ${e.tk}: ${POLICY[e.tk][0].toLowerCase()}.`]);
-  if (others.length) hints.push(['', `${others.length} colleague${others.length > 1 ? 's' : ''} already on it: ${others.map(r => people.get(r.personId)?.name).filter(Boolean).join(', ')}. Agree who covers which clients.`]);
+  const names = others.map(r => people.get(r.personId)?.name).filter(Boolean).join(', ');
+  if (others.length) hints.push(['', past ? `Also there from Bitcoin Suisse: ${names}.` : `${others.length} colleague${others.length > 1 ? 's' : ''} already on it: ${names}. Agree who covers which clients.`]);
   if (!past) overlaps.forEach(o => hints.push(['warn', `Overlaps with ${o.name} (${dateLabel(o)}), which you also requested.`]));
   if (flagged.has(e.id)) hints.push(['good', 'The events team flagged this event. They want someone there.']);
   async function submit(ev: React.FormEvent) {
