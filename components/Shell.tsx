@@ -20,7 +20,9 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const { me, data, palette, setPalette } = useApp();
   const path = usePathname();
   const [menu, setMenu] = useState(false);
-  const pending = data.requests.filter(r => r.status === 'requested').length + data.suggestions.filter(s => s.status === 'pending').length;
+  const waiting = data.requests.filter(r => r.status === 'requested').length;
+  // management sees open requests; the events team also new event suggestions to review
+  const pending = waiting + (me.role === 'management' ? 0 : data.suggestions.filter(s => s.status === 'pending').length);
   const todo = data.requests.filter(r => r.personId === me.id && r.status === 'approved' && !r.rating).length;
   useEffect(() => { if (!menu) return; const c = () => setMenu(false); setTimeout(() => document.addEventListener('click', c, { once: true }), 0); return () => document.removeEventListener('click', c); }, [menu]);
   async function signOut() { await fetch('/auth/signout', { method: 'POST' }); location.assign('/login'); }
@@ -32,7 +34,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           <nav className="nav" aria-label="Main">
             {NAV[me.role].map(k => (
               <Link key={k} href={`/${k}`} aria-current={path.startsWith(`/${k}`) ? 'page' : undefined}>
-                {LABEL[k]}{k === 'approvals' && pending > 0 && me.role !== 'management' && <span className="cnt">{pending}</span>}{k === 'my' && todo > 0 && <span className="cnt" title="Approved events with steps left">{todo}</span>}
+                {LABEL[k]}{k === 'approvals' && pending > 0 && <span className="cnt" title={`${waiting} request${waiting === 1 ? '' : 's'} waiting for a decision`}>{pending}</span>}{k === 'my' && todo > 0 && <span className="cnt" title="Approved events with steps left">{todo}</span>}
               </Link>
             ))}
           </nav>
