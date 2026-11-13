@@ -41,14 +41,14 @@ type C<T> = { h: string; w: number | string; r?: boolean; v: (x: T) => React.Rea
 function Table<T>({ cols, rows, empty }: { cols: C<T>[]; rows: T[]; empty: string }) {
   if (!rows.length) return <Text style={s.empty}>{empty}</Text>;
   return (
-    <View>
-      <View style={s.th} fixed>{cols.map(c => <Text key={c.h} style={[s.thc, { width: c.w }, c.r ? s.r : {}]}>{c.h}</Text>)}</View>
+    <>
+      <View style={s.th}>{cols.map(c => <Text key={c.h} style={[s.thc, { width: c.w }, c.r ? s.r : {}]}>{c.h}</Text>)}</View>
       {rows.map((x, i) => (
         <View key={i} style={s.tr} wrap={false}>
           {cols.map(c => { const v = c.v(x); return <View key={c.h} style={[s.td, { width: c.w }]}>{typeof v === 'string' || typeof v === 'number' ? <Text style={c.r ? s.r : {}}>{v}</Text> : v}</View>; })}
         </View>
       ))}
-    </View>
+    </>
   );
 }
 const TierTag = ({ e }: { e: Ev }) => <View style={s.tier}><View style={[s.dot, { backgroundColor: TIER[e.tk] }]} /><Text>{e.tk ? `Tier ${e.tk}` : 'Unrated'}</Text></View>;
@@ -93,6 +93,14 @@ function ReportDoc({ R, by, logo }: { R: Report; by: string; logo: Buffer | null
         </View>
 
         <View style={s.sect}>
+          <View wrap={false}><Text style={s.h2}>Key events nobody covers yet</Text><Text style={s.lede}>Upcoming Tier 1–2 events without a request. “Flagged” means Roman has asked sales for someone.</Text></View>
+          <Table rows={R.gaps.slice(0, 8)} empty="Every upcoming key event has someone from Bitcoin Suisse." cols={[
+            { h: 'Date', w: '17%', v: g => day(g.e) }, { h: 'Event', w: '55%', v: g => <Name e={g.e} /> }, { h: 'Tier', w: '14%', v: g => <TierTag e={g.e} /> },
+            { h: '', w: '14%', r: true, v: g => g.flagged ? <Text style={[s.r, { color: REDINK }]}>Flagged</Text> : '' },
+          ]} />
+          {R.gaps.length > 8 && <Text style={[s.dim, { marginTop: 4 }]}>+ {R.gaps.length - 8} more in the Excel export (sheet “Coverage gaps”).</Text>}
+        </View>
+        <View style={s.sect} break>
           <Text style={s.h2}>Coverage by region</Text><Text style={s.lede}>Upcoming Tier 1–3 events with someone from Bitcoin Suisse approved.</Text>
           {R.regions.map(g => (
             <View key={g.region} style={[s.tr, { alignItems: 'center' }]}>
@@ -104,14 +112,6 @@ function ReportDoc({ R, by, logo }: { R: Report; by: string; logo: Buffer | null
         </View>
 
         <View style={s.sect}>
-          <View wrap={false}><Text style={s.h2}>Key events nobody covers yet</Text><Text style={s.lede}>Upcoming Tier 1–2 events without a request. “Flagged” means Roman has asked sales for someone.</Text></View>
-          <Table rows={R.gaps.slice(0, 8)} empty="Every upcoming key event has someone from Bitcoin Suisse." cols={[
-            { h: 'Date', w: '17%', v: g => day(g.e) }, { h: 'Event', w: '56%', v: g => <Name e={g.e} /> }, { h: 'Tier', w: '14%', v: g => <TierTag e={g.e} /> },
-            { h: '', w: '14%', r: true, v: g => g.flagged ? <Text style={[s.r, { color: REDINK }]}>Flagged</Text> : '' },
-          ]} />
-          {R.gaps.length > 8 && <Text style={[s.dim, { marginTop: 4 }]}>+ {R.gaps.length - 8} more in the Excel export (sheet “Coverage gaps”).</Text>}
-        </View>
-        <View style={s.sect} break>
           <View wrap={false}><Text style={s.h2}>Results per event</Text><Text style={s.lede}>Approved trips to events that already happened: leads, meetings, rating and “go again” from the debriefs.</Text></View>
           <Table rows={R.results} empty="No events attended yet. Results appear after the first debriefs." cols={[
             { h: 'Date', w: '14%', v: x => day(x.e) }, { h: 'Event', w: '32%', v: x => <Name e={x.e} /> }, { h: 'Tier', w: '10%', v: x => <TierTag e={x.e} /> },
