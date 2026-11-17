@@ -149,8 +149,10 @@ await srv(`select public.login_note('ana@example.com', '10.0.0.3', false)`); awa
 ok(Number((await db.query(`select count(*) n from public.login_attempts where email = 'ana@example.com'`)).rows[0].n) === 0, 'a successful sign-in clears own typos');
 await fail('a@example.com', '10.0.0.9', 5); await fail('b@example.com', '10.0.0.9', 5); await fail('c@example.com', '10.0.0.9', 5); await fail('d@example.com', '10.0.0.9', 5); await fail('e@example.com', '10.0.0.9', 5); await fail('f@example.com', '10.0.0.9', 5);
 ok(await wait('g@example.com', '10.0.0.9') > 0, '30 failures from one address across e-mails: address locked');
-for (let i = 0; i < 40; i++) await srv('select public.login_note($1, $2, false)', ['lukas@example.com', '10.1.' + i + '.1']);
-ok(await wait('lukas@example.com', '10.9.9.9') > 0, '40 failures for one e-mail from many addresses: locked');
+for (let i = 0; i < 19; i++) await srv('select public.login_note($1, $2, false)', ['lukas@example.com', '10.1.' + i + '.1']);
+ok(await wait('lukas@example.com', '10.9.9.9') === 0, '19 failures for one e-mail from many addresses: still allowed');
+await srv('select public.login_note($1, $2, false)', ['lukas@example.com', '10.1.99.1']);
+ok(await wait('lukas@example.com', '10.9.9.9') > 0, '20 failures for one e-mail from many addresses: locked');
 await db.query(`update public.login_attempts set at = now() - interval '16 minutes'`);
 ok(await wait('roman@example.com', '10.0.0.1') === 0, 'lock ends after 15 minutes');
 
