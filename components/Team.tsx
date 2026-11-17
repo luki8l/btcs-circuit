@@ -21,7 +21,8 @@ export default function Team() {
   const shown = (p: { id: string; role: string; active: boolean }) => p.active && (p.role === 'sales' || p.role === 'events' || byPerson.has(p.id));
   const teams = [...new Set(data.people.filter(shown).map(p => p.team || '—'))].sort();
   const list = data.people.filter(p => shown(p) && (!team || (p.team || '—') === team) && (!onlyBusy || (byPerson.get(p.id) || []).length))
-    .sort((a, b) => (a.team || 'zz').localeCompare(b.team || 'zz') || a.name.localeCompare(b.name));
+    // Roman (approver) and his team on top, then the sales teams A–Z
+    .sort((a, b) => (b.role === 'events' ? 1 : 0) - (a.role === 'events' ? 1 : 0) || (a.team || 'zz').localeCompare(b.team || 'zz') || a.name.localeCompare(b.name));
   const groups = new Map<string, typeof list>(); list.forEach(p => { const k = p.team || 'No team'; groups.set(k, [...(groups.get(k) || []), p]); });
   const cur = mIdx(today);
   const cell = (pid: string, m: number) => (byPerson.get(pid) || []).filter(r => { const e = ev.get(r.eventId); return e && e.sd && e.mode !== 'tbd' && mIdx(e.sd) === m; })
