@@ -8,7 +8,7 @@ export function LoginForm({ next }: { next: string }) {
   useEffect(() => { if (ok) window.location.assign(next.startsWith('/') && !next.startsWith('//') ? next : '/'); }, [ok, next]);
   return (
     <form action={action} className="login-card" style={{ gap: 14 }}>
-      <div className="field"><label htmlFor="email">E-mail</label><input className="input" id="email" name="email" type="email" autoComplete="username" required autoFocus defaultValue={res?.email || ''} key={res?.email || ''} style={{ height: 48 }} /></div>
+      <div className="field"><label htmlFor="email">E-mail</label><input className="input" id="email" name="email" type="text" inputMode="email" autoCapitalize="none" spellCheck={false} autoComplete="username" required autoFocus defaultValue={res?.email || ''} key={res?.email || ''} style={{ height: 48 }} /></div>
       <div className="field"><label htmlFor="password">Password</label><input className="input" id="password" name="password" type="password" autoComplete="current-password" required style={{ height: 48 }} /></div>
       {res?.err && <p className="err" role="alert">{res.err}</p>}
       <button className="btn red" type="submit" disabled={pending || ok}>{pending || ok ? 'Signing in…' : 'Sign in'}</button>
