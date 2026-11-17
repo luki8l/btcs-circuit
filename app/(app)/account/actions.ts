@@ -8,7 +8,7 @@ const LOCAL = process.env.NODE_ENV === 'development' && process.env.CIRCUIT_LOCA
 export async function changePassword(_prev: PwState, form: FormData): Promise<PwState> {
   const cur = String(form.get('current') || ''), a = String(form.get('password') || ''), b = String(form.get('again') || '');
   if (!cur) return { err: 'Enter your current password.' };
-  if (a.length < 10) return { err: 'The new password needs at least 10 characters.' };
+  if (a.length < 8) return { err: 'The new password needs at least 8 characters.' };
   if (a !== b) return { err: 'The two new passwords are not the same.' };
   if (a === cur) return { err: 'The new password is the same as the current one.' };
   if (LOCAL) return cur === 'demo' ? { ok: true } : { err: 'Your current password is not right.' };   // local development: password is always "demo"

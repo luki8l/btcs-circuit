@@ -22,8 +22,8 @@ export function PasswordForm() {
   useEffect(() => { if (ok) window.location.assign('/'); }, [ok]);
   return (
     <form action={action} className="login-card" style={{ gap: 14 }}>
-      <div className="field"><label htmlFor="password">New password</label><input className="input" id="password" name="password" type="password" autoComplete="new-password" required minLength={10} autoFocus style={{ height: 48 }} /></div>
-      <div className="field"><label htmlFor="again">Same again</label><input className="input" id="again" name="again" type="password" autoComplete="new-password" required minLength={10} style={{ height: 48 }} /></div>
+      <div className="field"><label htmlFor="password">New password</label><input className="input" id="password" name="password" type="password" autoComplete="new-password" required minLength={8} autoFocus style={{ height: 48 }} /></div>
+      <div className="field"><label htmlFor="again">Same again</label><input className="input" id="again" name="again" type="password" autoComplete="new-password" required minLength={8} style={{ height: 48 }} /></div>
       {res?.err && <p className="err" role="alert">{res.err}</p>}
       <button className="btn red" type="submit" disabled={pending || ok}>{pending || ok ? 'Saving…' : 'Save and continue'}</button>
     </form>

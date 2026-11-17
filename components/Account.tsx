@@ -22,14 +22,14 @@ export default function Account() {
       </div>
       <div className="card acct">
         <h2 className="h2">Change password</h2>
-        <p className="muted small" style={{ margin: '4px 0 16px' }}>At least 10 characters. A short sentence is easy to remember and hard to guess.</p>
+        <p className="muted small" style={{ margin: '4px 0 16px' }}>At least 8 characters. A short sentence is easy to remember and hard to guess.</p>
         <form ref={form} action={run} className="acct-f">
           <label htmlFor="cur">Current password</label>
           <input id="cur" name="current" type="password" className="input" autoComplete="current-password" required />
           <label htmlFor="pw">New password</label>
-          <input id="pw" name="password" type="password" className="input" autoComplete="new-password" minLength={10} required />
+          <input id="pw" name="password" type="password" className="input" autoComplete="new-password" minLength={8} required />
           <label htmlFor="pw2">New password again</label>
-          <input id="pw2" name="again" type="password" className="input" autoComplete="new-password" minLength={10} required />
+          <input id="pw2" name="again" type="password" className="input" autoComplete="new-password" minLength={8} required />
           {st?.err && <p className="err" role="alert">{st.err}</p>}
           {st?.ok && <p className="ok-t" role="status">Done. Your new password is active.</p>}
           <div><button className="btn red" disabled={pending}>{pending ? 'Saving…' : 'Change password'}</button></div>

@@ -25,7 +25,7 @@ export async function signIn(_prev: SignInState, form: FormData): Promise<SignIn
 
 export async function setPassword(_prev: SignInState, form: FormData): Promise<SignInState> {
   const a = String(form.get('password') || ''), b = String(form.get('again') || '');
-  if (a.length < 10) return { err: 'At least 10 characters, please.' };
+  if (a.length < 8) return { err: 'At least 8 characters, please.' };
   if (a !== b) return { err: 'The two passwords are not the same.' };
   if (process.env.NODE_ENV === 'development' && process.env.CIRCUIT_LOCAL_DB === '1') return { ok: true };
   const sb = await supabaseServer();
