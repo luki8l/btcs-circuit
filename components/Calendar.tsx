@@ -64,7 +64,7 @@ export default function Calendar({ events, month, setMonth, big, tools }: { even
                   const pr = presence(l.e.id);
                   return (
                     <button key={l.e.id} className={`cal-bar t${l.e.tk}`} style={{ gridColumn: `${l.s + 1} / ${l.t + 2}`, gridRow: l.lane + 2 }}
-                      data-tip={`<b>${h(l.e.name)}</b>${h(dateLabel(l.e))} · ${h(place(l.e))}<br>${l.e.tk ? 'Tier ' + l.e.tk : 'Unrated'}${pr.approved.length ? ` · ${pr.approved.length} going` : ''}${pr.requested.length ? ` · ${pr.requested.length} waiting` : ''}${pr.flagged ? ' · needs someone' : ''}`}
+                      data-tip={`<b>${h(l.e.name)}</b>${h(dateLabel(l.e))} · ${h(place(l.e))}<br>${l.e.tk ? 'Tier ' + l.e.tk : 'Unrated'}${pr.approved.length ? ` · ${pr.approved.length} going` : ''}${pr.requested.length ? ` · ${pr.requested.length} waiting` : ''}${pr.flagged ? ' · flagged by Roman' : ''}`}
                       onClick={() => open({ kind: 'event', id: l.e.id, view: 'detail' })}>
                       {pr.flagged && !pr.approved.length && <IcFlag s={12} className="fl" />}<span>{l.e.name}</span>
                       {(pr.approved.length + pr.requested.length) > 0 && <span className="who">{pr.approved.slice(0, 3).map(r => <i key={r.id} />)}{pr.requested.slice(0, 2).map(r => <i key={r.id} className="req" />)}</span>}
@@ -102,7 +102,7 @@ export function CalendarLegend({ flags = true }: { flags?: boolean }) {
       </div>
       <div className="sl-g" role="listitem"><b>Bitcoin Suisse</b>
         <span><i className="cal-dot" />Someone approved (one dot each)</span><span><i className="cal-dot req" />Request waiting</span>
-        {flags && <span><IcFlag s={12} className="fl" />Needs someone (flagged)</span>}
+        {flags && <span><IcFlag s={12} className="fl" />Flagged by Roman</span>}
       </div>
       <div className="sl-g" role="listitem"><b>Days</b>
         <span><i className="cal-today">13</i>Today</span><span><i className="cal-side-ic" />Side list: month known, day not fixed yet</span>

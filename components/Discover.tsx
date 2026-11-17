@@ -11,7 +11,7 @@ import {
 } from '@/lib/model';
 
 type View = 'list' | 'calendar' | 'year';
-const PRES: Record<Presence, string> = { going: 'Someone is going', requested: 'Waiting for approval', open: 'Nobody from us yet', flagged: 'Needs someone (flagged)', mine: 'My requests' };
+const PRES: Record<Presence, string> = { going: 'Someone is going', requested: 'Waiting for approval', open: 'Nobody from us yet', flagged: 'Flagged by Roman', mine: 'My requests' };
 
 export default function Discover() {
   const { events, presence, me, group, setGroup, data, open, today } = useApp();
@@ -85,7 +85,7 @@ export default function Discover() {
     ['All upcoming', NO_FILTERS, true],
     ['Key events (Tier 1–2)', { ...NO_FILTERS, tiers: [1, 2] }, true],
     ['Nobody from us yet', { ...NO_FILTERS, tiers: [1, 2, 3], presence: ['open'] }, true],
-    ['Needs someone', { ...NO_FILTERS, presence: ['flagged'] }, data.flags.length > 0],
+    ['Flagged by Roman', { ...NO_FILTERS, presence: ['flagged'] }, data.flags.length > 0],
     [`Good fit for ${GS[group]}`, { ...NO_FILTERS, fitGroup: group, fitMin: 4 }, true],
     [`In ${me.market}`, { ...NO_FILTERS, countries: [me.market] }, !!me.market && upIn([me.market])],
     [`In ${myArea}`, { ...NO_FILTERS, countries: AREAS[myArea] || [] }, !!myArea && upIn(AREAS[myArea] || [])],
@@ -231,7 +231,7 @@ function List({ list, grouped, reset, past = 0, showPast }: { list: Ev[]; groupe
           <div className="sub">{place(e)}{e.kind ? ` · ${e.kind}` : ''}{e.mode !== 'exact' ? ` · ${dateLabel(e)}` : ''}</div></div>
         <Tier e={e} full />
         <div className="presence">{all.length ? <><span className="avs">{all.slice(0, 4).map(r => <Av key={r.id} p={people.get(r.personId)} req={r.status === 'requested'} size="sm" />)}</span>{p.approved.length ? `${p.approved.length} going` : ''}{p.approved.length && p.requested.length ? ' · ' : ''}{p.requested.length ? `${p.requested.length} waiting` : ''}</>
-          : p.flagged ? <span className="flag"><IcFlag s={13} />Needs someone</span> : 'Nobody from us yet'}</div>
+          : p.flagged ? <span className="flag"><IcFlag s={13} />Flagged by Roman</span> : 'Nobody from us yet'}</div>
         <div className="act" onClick={x => x.stopPropagation()}>
           {mine ? <span className={`pill ${mine.status === 'approved' ? 'ok' : 'wait'}`}><i />{mine.status === 'approved' ? (e.past ? 'You were there' : 'You’re going') : e.past ? 'Logged' : 'Requested'}</span>
             : e.past ? <button className="btn ghost sm" onClick={() => open({ kind: 'event', id: e.id, view: 'request' })} data-tip="Went there without a request? Log it for the debrief.">I was there</button>
