@@ -78,17 +78,19 @@ export default function Discover() {
     ['Everything', { when: 'all', from: '', to: '' }],
   ];
   const whenNow = WHEN.find(([, w]) => w.when === f.when && w.from === f.from && w.to === f.to)?.[0] || `${f.from ? monthLabel(keyToIdx(f.from)) : 'Start'} – ${f.to ? monthLabel(keyToIdx(f.to)) : 'end'}`;
-  // "In Austria", "In the Nordics": the person's market and the area of their team, only when there are events there
+  // the sales team's region ("In the Nordics", "In Portugal", "In Benelux", "In Austria & Eastern Europe") always, right after
+  // "All upcoming"; the person's own market only when something is coming up there
   const upIn = (cs: string[]) => events.some(e => !e.past && cs.includes(e.cn));
-  const myArea = AREAS[me.team] ? me.team : AREAS['the ' + me.team] ? 'the ' + me.team : areaOf(me.market);
+  const teamArea = AREAS[me.team] ? me.team : AREAS['the ' + me.team] ? 'the ' + me.team : '';
+  const myArea = teamArea || areaOf(me.market);
   const quick: [string, Filters, boolean][] = [
     ['All upcoming', NO_FILTERS, true],
+    [`In ${myArea}`, { ...NO_FILTERS, countries: AREAS[myArea] || [] }, !!myArea && (!!teamArea || upIn(AREAS[myArea] || []))],
     ['Key events (Tier 1–2)', { ...NO_FILTERS, tiers: [1, 2] }, true],
     ['Nobody from us yet', { ...NO_FILTERS, tiers: [1, 2, 3], presence: ['open'] }, true],
     ['Flagged by Roman', { ...NO_FILTERS, presence: ['flagged'] }, data.flags.length > 0],
     [`Good fit for ${GS[group]}`, { ...NO_FILTERS, fitGroup: group, fitMin: 4 }, true],
-    [`In ${me.market}`, { ...NO_FILTERS, countries: [me.market] }, !!me.market && upIn([me.market])],
-    [`In ${myArea}`, { ...NO_FILTERS, countries: AREAS[myArea] || [] }, !!myArea && upIn(AREAS[myArea] || [])],
+    [`In ${me.market}`, { ...NO_FILTERS, countries: [me.market] }, !!me.market && `In ${me.market}` !== `In ${myArea}` && upIn([me.market])],
     ['My requests', { ...NO_FILTERS, when: 'all', presence: ['mine'] }, data.requests.some(r => r.personId === me.id)],
   ];
   const same = (a: Filters, b: Filters) => filtersToQuery(a) === filtersToQuery(b);

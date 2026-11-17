@@ -86,6 +86,7 @@ export const AREAS: Record<string, string[]> = {
   DACH: ['Germany', 'Austria', 'Switzerland', 'Liechtenstein', 'Germany / Austria'],
   'the Middle East': ['United Arab Emirates', 'Saudi Arabia', 'Qatar', 'Bahrain', 'Oman', 'Kuwait'],
   'Austria & Eastern Europe': ['Austria', 'Germany / Austria', 'Czechia', 'Poland', 'Hungary', 'Slovakia', 'Slovenia', 'Croatia', 'Romania', 'Bulgaria', 'Serbia'],
+  Portugal: ['Portugal'],
 };
 // words a country's events are also found by (areas overlap, so this is per country, not per area)
 const AREA_WORDS: [string[], string][] = [
