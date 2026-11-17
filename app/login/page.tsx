@@ -16,7 +16,7 @@ export default async function Login({ searchParams }: { searchParams: Promise<{ 
           <p className="k">Circuit</p>
           <h2 className="h2">Sign in</h2>
           {sp.link && <p className="err">That sign-in link has expired or was used already. Ask an admin for a new one.</p>}
-          <LoginForm next={sp.next || '/'} />
+          <LoginForm next={/^\/(?![/\\])[^\\]*$/.test(sp.next || '') ? sp.next! : '/'} />
           <p className="foot2">Accounts are set up by an admin. Forgot your password? Ask for a new sign-in link.</p>
         </div>
       </section>

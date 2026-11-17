@@ -7,12 +7,13 @@ import { rpcClient, statusOf, messageOf } from '@/lib/rpc';
 const uuid = z.string().uuid();
 const id = z.number().int().positive();
 const text = (n: number) => z.string().max(n);
+const link = z.string().trim().max(500).refine(v => v === '' || /^https?:\/\/[^\s]+$/i.test(v), 'must be a web link (https://…)');
 const mode = z.enum(['attend', 'speak', 'meetings', 'sponsor']);
 const ticket = z.enum(['free', 'paid', 'have']);
 const groups = z.array(z.number().int().min(0).max(4)).min(1).max(5);
 const reqFields = { p_mode: mode, p_ticket: ticket, p_cost: z.number().min(0).max(9_999_999), p_groups: groups, p_meetings: z.number().int().min(0).max(500), p_reason: text(2000) };
 const eventData = z.object({
-  name: z.string().trim().min(1).max(200), website: text(500).optional().nullable(), mode: z.enum(['exact', 'month', 'tbd']),
+  name: z.string().trim().min(1).max(200), website: link.optional().nullable(), mode: z.enum(['exact', 'month', 'tbd']),
   start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable().or(z.literal('')), end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().nullable().or(z.literal('')),
   dateNote: text(80).optional().nullable(), region: text(20).optional().nullable(), country: text(40).optional().nullable(), city: text(120).optional().nullable(),
   kind: text(120).optional().nullable(), focus: text(300).optional().nullable(), tier: z.number().int().min(1).max(5).nullable().optional(),
@@ -30,14 +31,23 @@ const FNS: Record<string, z.ZodTypeAny> = {
   request_hubspot: z.object({ p_id: uuid, p_done: z.boolean() }),
   request_debrief: z.object({ p_id: uuid, p_leads: z.number().int().min(0).max(100000), p_held: z.number().int().min(0).max(10000), p_rating: z.number().int().min(1).max(5), p_again: z.enum(['yes', 'maybe', 'no']), p_note: text(2000) }),
   flag_set: z.object({ p_event: id, p_on: z.boolean(), p_note: text(300) }),
-  suggestion_create: z.object({ p_name: z.string().trim().min(1).max(200), p_month: z.string().regex(/^(\d{4}-(0[1-9]|1[0-2]))?$/), p_city: text(120), p_website: text(500), p_reason: text(2000) }),
+  suggestion_create: z.object({ p_name: z.string().trim().min(1).max(200), p_month: z.string().regex(/^(\d{4}-(0[1-9]|1[0-2]))?$/), p_city: text(120), p_website: link, p_reason: text(2000) }),
   suggestion_decide: z.object({ p_id: uuid, p_add: z.boolean() }),
   event_save: z.object({ p_id: id.nullable(), p_data: eventData }),
   event_archive: z.object({ p_id: id, p_archived: z.boolean() }),
   activity_feed: z.object({ p_limit: z.number().int().min(1).max(500) }),
 };
 
+/** calls from this app's own pages only: same origin, JSON (a form or page on another site can't post here) */
+function sameOrigin(req: Request) {
+  const h = req.headers, site = h.get('sec-fetch-site'), origin = h.get('origin'), host = h.get('x-forwarded-host') || h.get('host');
+  if (site && site !== 'same-origin') return false;
+  if (origin) { try { if (new URL(origin).host !== host) return false; } catch { return false; } }
+  return (h.get('content-type') || '').toLowerCase().startsWith('application/json');
+}
+
 export async function POST(req: Request) {
+  if (!sameOrigin(req)) return NextResponse.json({ error: 'not allowed' }, { status: 403 });
   let raw: unknown = null;
   try { raw = await req.json(); } catch { /* not JSON */ }
   const body = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw as { fn?: unknown; args?: unknown } : {};

@@ -2,10 +2,15 @@
 import { useActionState, useEffect } from 'react';
 import { signIn, setPassword, type SignInState } from './actions';
 
+/** only a path on this site (not //other.site or a backslash variant): anything else goes home */
+function sameSite(next: string) {
+  try { const u = new URL(next, location.origin); return u.origin === location.origin ? u.pathname + u.search + u.hash : '/'; } catch { return '/'; }
+}
+
 export function LoginForm({ next }: { next: string }) {
   const [res, action, pending] = useActionState<SignInState, FormData>(signIn, null);
   const ok = !!res?.ok;
-  useEffect(() => { if (ok) window.location.assign(next.startsWith('/') && !next.startsWith('//') ? next : '/'); }, [ok, next]);
+  useEffect(() => { if (ok) window.location.assign(sameSite(next)); }, [ok, next]);
   return (
     <form action={action} className="login-card" style={{ gap: 14 }}>
       <div className="field"><label htmlFor="email">E-mail</label><input className="input" id="email" name="email" type="text" inputMode="email" autoCapitalize="none" spellCheck={false} autoComplete="username" required autoFocus defaultValue={res?.email || ''} key={res?.email || ''} style={{ height: 48 }} /></div>

@@ -194,7 +194,7 @@ export default function Approvals() {
             <div style={{ minWidth: 0 }}><b style={{ fontSize: 15 }}>{s.name}</b>
               <div className="sub">{[monthText(s.month), s.city].filter(Boolean).join(' · ') || 'No date yet'} · {s.source === 'masterlist' ? 'comment in the masterlist' : `from ${people.get(s.by || '')?.name || 'a colleague'}`}</div>
               {s.reason && <p className="why" style={{ marginTop: 10, fontSize: 13.5 }}>{s.reason}</p>}
-              {s.website && <a className="dim small" href={s.website} target="_blank" rel="noopener noreferrer">{s.website}</a>}</div>
+              {s.website && (/^https?:\/\//i.test(s.website) ? <a className="dim small" href={s.website} target="_blank" rel="noopener noreferrer">{s.website}</a> : <span className="dim small">{s.website}</span>)}</div>
             {!ro && <div className="side" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
               <button className="btn ok sm" disabled={busy} onClick={async () => { const r = await act<{ eventId: number }>('suggestion_decide', { p_id: s.id, p_add: true }, 'Added. Now fill in country, tier and fit.'); if (r.ok && r.data?.eventId) setFresh(r.data.eventId); }}>Add to calendar</button>
               <Confirm label="Dismiss" sure="Yes, dismiss" className="btn line sm" disabled={busy} onYes={() => act('suggestion_decide', { p_id: s.id, p_add: false }, 'Dismissed')} />

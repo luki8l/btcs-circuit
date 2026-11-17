@@ -53,11 +53,21 @@ export async function newLink(email: string, uid: string): Promise<Res> {
   catch (e) { return { err: e instanceof Error ? messageOf(e) : 'Something went wrong.' }; }
 }
 
+const SavePerson = z.object({ id: z.string().uuid(), name: z.string().trim().min(2).max(80), role: Role, market: z.string().max(60), team: z.string().max(60), title: z.string().max(80), active: z.boolean() });
+
 export async function savePerson(input: { id: string; name: string; role: string; market: string; team: string; title: string; active: boolean }): Promise<Res> {
   try {
-    const rpc = await rpcClient();
-    await rpc('person_save', { p_id: input.id, p_name: input.name, p_role: input.role, p_market: input.market, p_team: input.team, p_title: input.title, p_active: input.active });
-    if (!LOCAL) await supabaseAdmin().auth.admin.updateUserById(input.id, { app_metadata: { role: input.role } }).catch(() => null);
+    await requireAdmin();
+    const p = SavePerson.parse(input);
+    await (await rpcClient())('person_save', { p_id: p.id, p_name: p.name, p_role: p.role, p_market: p.market, p_team: p.team, p_title: p.title, p_active: p.active });
+    if (!LOCAL) {
+      // the role also in app metadata; deactivated = the login is blocked too, which ends their sessions on every device
+      const { error } = await supabaseAdmin().auth.admin.updateUserById(p.id, { app_metadata: { role: p.role }, ban_duration: p.active ? 'none' : '876000h' });
+      if (error) return { err: 'Saved, but the login could not be updated: ' + error.message };
+    }
     return { ok: true };
-  } catch (e) { return { err: messageOf(e) }; }
+  } catch (e) {
+    if (e instanceof z.ZodError) return { err: 'Check the fields: ' + e.issues.map(i => i.path.join('.')).join(', ') };
+    return { err: e instanceof Error ? messageOf(e) : 'Something went wrong.' };
+  }
 }

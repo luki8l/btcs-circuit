@@ -24,7 +24,7 @@ Roles: `admin` (everything + accounts) · `events` (approves, keeps the catalogu
 ## Architecture
 
 ```
-Browser ─► Next.js (Vercel, fra1) ─► /api/act { fn, args }  (zod-validated, whitelist)
+Browser ─► Next.js (Vercel, arn1) ─► /api/act { fn, args }  (zod-validated, whitelist)
                                  └► server components: bootstrap()           ▼
                                                      Supabase Postgres: tables read-only, every write through a
                                                      SECURITY DEFINER function that checks the role and logs activity
@@ -32,12 +32,21 @@ Browser ─► Next.js (Vercel, fra1) ─► /api/act { fn, args }  (zod-validat
 
 * **The database owns the rules** (`supabase/migrations`): roles, policy (Tier 4–5 need a reason), one active request per person and event, only approved requests can be debriefed, only after the event started, activity log nobody can edit.
 * The role comes only from `app_metadata` (set by the server with the secret key), never from what someone types.
-* Accounts: an admin creates them under People; the app shows a one-time sign-in link (24 h) to send via Teams. Sign-ups are off.
+* Accounts: an admin creates them under People; the app shows a one-time sign-in link (valid 1 h; make a new one under People if it ran out) to send via Teams. Sign-ups are off.
+
+## Security
+
+* **Access**: every page and API call needs a signed-in, active account (middleware + the database again). Sign-ups are off; only an admin creates accounts. Deactivating someone also blocks their login in Supabase Auth, which ends their sessions on every device.
+* **Database**: anonymous visitors can't read or call anything. Signed-in users can't read or write tables directly; everything goes through the functions, which check the role. New tables and functions start closed (default privileges revoked); each migration grants what it needs. `npm run test:sql` checks all of this.
+* **Sessions**: cookies are `HttpOnly`, `Secure`, `SameSite=Lax`, 400 days (people stay signed in). The browser never talks to Supabase; the Supabase URL and key are not in the page code. Account → *Sign out on all other devices*; changing the password does that too.
+* **Passwords**: sign-in and the current-password check are throttled (8 wrong tries for one e-mail from one address, 30 from one address, or 40 for one e-mail from anywhere → 15 minutes wait; `public.login_attempts`, kept one day, server only). A new password without the current one only right after a sign-in link (< 1 h).
+* **Browser**: Content Security Policy with a per-request nonce (only the app's own scripts run), no framing, no referrer to other sites, HSTS, Permissions-Policy, same-origin opener/resource policy. `/api/act` accepts same-origin JSON only; links in events and suggestions must be `http(s)://` (API, database and display).
+* **Dependencies**: `npm audit` clean (postcss and uuid pinned to patched versions via `overrides`).
 
 ## Setup (once)
 
 1. Supabase project (EU region; this one runs in Stockholm, eu-north-1, so Vercel functions run in arn1 next to it). SQL Editor: run `supabase/migrations/*.sql` in order (the second file seeds the 267 masterlist events).
-2. Authentication → Sign-ups off. URL configuration: Site URL = the Vercel URL. Email OTP expiry: 86400 s (links valid 24 h).
+2. Authentication → Sign-ups off. URL configuration: Site URL = the Vercel URL. Email OTP expiry: 3600 s (links valid 1 h).
 3. Vercel: import the repo, env vars `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` (server only), `NEXT_PUBLIC_SITE_URL`.
 4. First admin: create the user in Supabase (Authentication → Add user) with app metadata `{"role":"admin"}`, or `update public.profiles set role = 'admin' where email = '…';`.
 

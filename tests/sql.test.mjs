@@ -130,5 +130,29 @@ ok(!(await call(ANA, 'bootstrap')).people.some(x => x.id === BEN), 'deactivated 
 ok((await call(ROM, 'activity_feed', { p_limit: 100 })).length > 10, 'activity is logged');
 ok(await err(call(ANA, 'activity_feed', { p_limit: 10 })) === '42501', 'sales cannot read the activity log');
 
+console.log('security');
+ok(await err(as(ANA, 'select * from public.profiles')) === '42501' && await err(as(ADM, 'select * from public.requests')) === '42501', 'tables not readable directly, only through the functions');
+ok(await err(call(ROM, 'event_save', { p_id: null, p_data: { name: 'Bad link', mode: 'tbd', website: 'javascript:alert(1)' } })) === '23514', 'event link must be a web link');
+ok(await err(call(ANA, 'suggestion_create', { p_name: 'Bad link', p_month: '', p_city: '', p_website: 'data:text/html,hi', p_reason: '' })) === '23514', 'suggested link must be a web link');
+ok((await call(ROM, 'event_save', { p_id: null, p_data: { name: 'Good link', mode: 'tbd', website: 'https://example.com/x' } })).website === 'https://example.com/x', 'https link accepted');
+ok(await err(call(ANA, 'login_wait', { p_email: 'x@example.com', p_ip: '1.2.3.4' })) === '42501' && await err(call(null, 'login_note', { p_email: 'x', p_ip: '', p_ok: false })) === '42501', 'sign-in throttle: only the server');
+const srv = async (sql, params = []) => db.transaction(async tx => { await tx.query('set local role service_role'); return (await tx.query(sql, params)).rows; });
+const wait = async (e, ip) => (await srv('select public.login_wait($1, $2) w', [e, ip]))[0].w;
+const fail = async (e, ip, n) => { for (let i = 0; i < n; i++) await srv('select public.login_note($1, $2, false)', [e, ip]); };
+await fail('Roman@Example.com', '10.0.0.1', 7);
+ok(await wait('roman@example.com', '10.0.0.1') === 0, '7 failures: still allowed');
+await fail('roman@example.com', '10.0.0.1', 1);
+const w = await wait('ROMAN@example.com', '10.0.0.1');
+ok(w > 800 && w <= 900, `8 failures from one address: locked ~15 min (${w}s), any spelling of the e-mail`);
+ok(await wait('roman@example.com', '10.0.0.2') === 0, 'the real person elsewhere can still sign in');
+await srv(`select public.login_note('ana@example.com', '10.0.0.3', false)`); await srv(`select public.login_note('ana@example.com', '10.0.0.3', true)`);
+ok(Number((await db.query(`select count(*) n from public.login_attempts where email = 'ana@example.com'`)).rows[0].n) === 0, 'a successful sign-in clears own typos');
+await fail('a@example.com', '10.0.0.9', 5); await fail('b@example.com', '10.0.0.9', 5); await fail('c@example.com', '10.0.0.9', 5); await fail('d@example.com', '10.0.0.9', 5); await fail('e@example.com', '10.0.0.9', 5); await fail('f@example.com', '10.0.0.9', 5);
+ok(await wait('g@example.com', '10.0.0.9') > 0, '30 failures from one address across e-mails: address locked');
+for (let i = 0; i < 40; i++) await srv('select public.login_note($1, $2, false)', ['lukas@example.com', '10.1.' + i + '.1']);
+ok(await wait('lukas@example.com', '10.9.9.9') > 0, '40 failures for one e-mail from many addresses: locked');
+await db.query(`update public.login_attempts set at = now() - interval '16 minutes'`);
+ok(await wait('roman@example.com', '10.0.0.1') === 0, 'lock ends after 15 minutes');
+
 console.log(fails ? `\n${fails} FAILED` : '\nall passed');
 process.exit(fails ? 1 : 0);
