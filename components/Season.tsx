@@ -106,7 +106,7 @@ export function SeasonLegend({ flags = true }: { flags?: boolean }) {
       <div className="sl-g" role="listitem"><b>Bitcoin Suisse</b>
         <span>{ring('ring')}Someone approved</span>
         <span>{ring('ring req')}Request waiting</span>
-        {flags && <span>{ring('ring flag')}Roman wants someone</span>}
+        {flags && <span>{ring('ring flag')}Needs someone (flagged)</span>}
       </div>
       <div className="sl-g" role="listitem"><b>Time</b>
         <span><G><circle className="m f3" cx="11" cy="9" r="5" opacity=".4" /></G>Already over</span>

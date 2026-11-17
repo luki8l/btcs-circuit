@@ -73,7 +73,7 @@ const CC: Record<string, string> = {
   'DE/AT': 'Germany / Austria', DK: 'Denmark', ES: 'Spain', FI: 'Finland', FIN: 'Finland', FL: 'Liechtenstein', LI: 'Liechtenstein', FR: 'France',
   GB: 'United Kingdom', UK: 'United Kingdom', 'UNITED KINGDOM': 'United Kingdom', HK: 'Hong Kong', HR: 'Croatia', IE: 'Ireland', IN: 'India', IND: 'India',
   IT: 'Italy', JP: 'Japan', JAP: 'Japan', KR: 'South Korea', SK: 'South Korea', LU: 'Luxembourg', MC: 'Monaco', MX: 'Mexico', MEX: 'Mexico',
-  NL: 'Netherlands', NO: 'Norway', NZ: 'New Zealand', PL: 'Poland', PT: 'Portugal', QA: 'Qatar', QAT: 'Qatar', RO: 'Romania', SA: 'Saudi Arabia',
+  NL: 'Netherlands', NO: 'Norway', HU: 'Hungary', BG: 'Bulgaria', RS: 'Serbia', NZ: 'New Zealand', PL: 'Poland', PT: 'Portugal', QA: 'Qatar', QAT: 'Qatar', RO: 'Romania', SA: 'Saudi Arabia',
   SE: 'Sweden', SWE: 'Sweden', SG: 'Singapore', SGP: 'Singapore', SI: 'Slovenia', TH: 'Thailand', TR: 'Türkiye', TK: 'Türkiye',
   AE: 'United Arab Emirates', UAE: 'United Arab Emirates', US: 'United States', USA: 'United States', ZA: 'South Africa', ZAF: 'South Africa',
 };
@@ -85,7 +85,13 @@ export const AREAS: Record<string, string[]> = {
   Benelux: ['Netherlands', 'Belgium', 'Luxembourg'],
   DACH: ['Germany', 'Austria', 'Switzerland', 'Liechtenstein', 'Germany / Austria'],
   'the Middle East': ['United Arab Emirates', 'Saudi Arabia', 'Qatar', 'Bahrain', 'Oman', 'Kuwait'],
+  'Austria & Eastern Europe': ['Austria', 'Germany / Austria', 'Czechia', 'Poland', 'Hungary', 'Slovakia', 'Slovenia', 'Croatia', 'Romania', 'Bulgaria', 'Serbia'],
 };
+// words a country's events are also found by (areas overlap, so this is per country, not per area)
+const AREA_WORDS: [string[], string][] = [
+  [AREAS['the Nordics'], 'nordics nordic scandinavia'], [AREAS.Benelux, 'benelux'], [AREAS['the Middle East'], 'middle east gcc'],
+  [['Czechia', 'Poland', 'Hungary', 'Slovakia', 'Slovenia', 'Croatia', 'Romania', 'Bulgaria', 'Serbia'], 'eastern europe cee'],
+];
 export const areaOf = (country: string) => Object.keys(AREAS).find(a => AREAS[a].includes(country)) || '';
 // extra words people type: local names, short forms
 const ALIAS: Record<string, string> = {
@@ -123,14 +129,14 @@ export function kindOf(t: string | null): Ev['group'] {
 
 export function prep(e: RawEvent, today: Date): Ev {
   const sd = e.start ? pd(e.start) : null;
-  const cn = countryName(e.country), area = areaOf(cn);
+  const cn = countryName(e.country), area = AREA_WORDS.filter(([cs]) => cs.includes(cn)).map(([, w]) => w).join(' ');
   let ed = e.end ? pd(e.end) : sd;
   if (sd && ed && ed < sd) ed = sd;
   const endCheck = e.mode === 'tbd' || !sd ? null : e.mode === 'month' ? new Date(sd.getFullYear(), sd.getMonth() + 1, 0) : ed;
   return {
     ...e, sd, ed, endCheck, past: !!endCheck && endCheck < today, mk: e.mode === 'tbd' || !e.start ? 'TBD' : e.start.slice(0, 7),
     tk: e.tier || 0, group: kindOf(e.kind), reg: REGIONS.includes(e.region) ? e.region : 'Other',
-    hay: fold([e.name, e.city, e.country, cn, ALIAS[cn], area !== 'DACH' ? area : '', area === 'the Nordics' ? 'nordic scandinavia' : '', REGION_LABEL[e.region], e.kind, e.focus,
+    hay: fold([e.name, e.city, e.country, cn, ALIAS[cn], area, REGION_LABEL[e.region], e.kind, e.focus,
       ...CITY_ALIAS.filter(([re]) => re.test(e.city || '')).map(([, a]) => a)].filter(Boolean).join(' ')),
     cn,
   };

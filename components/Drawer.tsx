@@ -135,7 +135,7 @@ function Detail({ e }: { e: Ev }) {
           <section className="sec">
             <div className="lab"><span>Your tools (Roman)</span></div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button className="btn line sm" disabled={busy} onClick={() => act('flag_set', { p_event: e.id, p_on: !flag, p_note: '' }, flag ? 'Flag removed' : 'Flagged: sales see “Roman wants someone”')}><IcFlag s={14} />{flag ? 'Remove flag' : 'We need someone here'}</button>
+              <button className="btn line sm" disabled={busy} onClick={() => act('flag_set', { p_event: e.id, p_on: !flag, p_note: '' }, flag ? 'Flag removed' : 'Flagged: sales see “Needs someone”')}><IcFlag s={14} />{flag ? 'Remove flag' : 'We need someone here'}</button>
               <button className="btn line sm" onClick={() => open({ kind: 'event', id: e.id, view: 'assign' })}><IcUsers s={14} />{e.past ? 'Log who was there' : 'Send someone'}</button>
               <button className="btn line sm" onClick={() => open({ kind: 'edit', id: e.id })}><IcEdit s={14} />Edit event</button>
             </div>
@@ -182,7 +182,7 @@ function RequestForm({ e, rid }: { e: Ev; rid?: string }) {
   const names = others.map(r => people.get(r.personId)?.name).filter(Boolean).join(', ');
   if (others.length) hints.push(['', past ? `Also there from Bitcoin Suisse: ${names}.` : `${others.length} colleague${others.length > 1 ? 's' : ''} already on it: ${names}. Agree who covers which clients.`]);
   if (!past) overlaps.forEach(o => hints.push(['warn', `Overlaps with ${o.name} (${dateLabel(o)}), which you also requested.`]));
-  if (flagged.has(e.id)) hints.push(['good', 'Roman flagged this event: he wants someone there.']);
+  if (flagged.has(e.id)) hints.push(['good', 'Flagged: Bitcoin Suisse needs someone at this event.']);
   async function submit(ev: React.FormEvent) {
     ev.preventDefault();
     if (strict && why.trim().length < 5) { setErr('Tier 4–5 events need a short reason.'); return; }

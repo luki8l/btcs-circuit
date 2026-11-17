@@ -104,7 +104,7 @@ export async function buildXlsx(R: Report, by: string): Promise<Buffer> {
   // 6 gaps
   sheet(wb, 'Coverage gaps', [
     { header: 'Event', width: 40 }, { header: 'Date', width: 12, fmt: DATE }, { header: 'Date (approx.)', width: 18 }, { header: 'Place', width: 26 }, { header: 'Tier', width: 6 },
-    { header: 'Roman wants someone', width: 12 }, { header: 'Audience size', width: 10 }, { header: 'Ticket (masterlist)', width: 30 },
+    { header: 'Needs someone (flagged)', width: 14 }, { header: 'Audience size', width: 10 }, { header: 'Ticket (masterlist)', width: 30 },
   ], R.gaps.map(({ e, flagged }) => [e.name, when(e), e.mode === 'exact' ? null : dateLabel(e), place(e), tier(e), flagged ? 'Yes' : null, e.size, e.costTicket]),
     'Upcoming Tier 1–2 events where nobody from Bitcoin Suisse is approved or waiting.');
 

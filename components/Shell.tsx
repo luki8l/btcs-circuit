@@ -74,6 +74,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                   <Link href="/my" role="menuitem">My events</Link>
                   <Link href="/discover" role="menuitem">All events</Link>
                   <button role="menuitem" onClick={() => setTour(true)}>Walkthrough</button>
+                  <Link href="/account" role="menuitem">Change password</Link>
                   <button role="menuitem" onClick={signOut}>Sign out</button>
                 </div>
               )}

@@ -47,7 +47,7 @@ const EVENTS: Step[] = [
   { title: 'Welcome to Circuit', text: 'Sales ask to go to external events, you decide, and you see what it brings: coverage, budget and leads. One minute.' },
   { path: '/approvals', el: ['.kpis'], title: 'Your numbers', text: 'Requests waiting for you, approved trips, the ticket budget, key events nobody covers yet and new event suggestions.' },
   { path: '/approvals', click: TAB(1), el: ['.tbl tbody tr.click', '.tabs ~ .card'], title: 'Decide in one click', text: 'Each row shows the event, the tier, who asks, how they go, the ticket and the policy check. Green button approves; ✕ declines with a reason for sales. Click a row for their why. Tick several rows to approve them at once. “Decided” lists everything you approved or declined.' },
-  { path: '/approvals', click: TAB(3), el: ['.tabs ~ .card'], title: 'Flag the gaps', text: 'Tier 1–2 events where nobody from us goes yet. “Flag for sales” shows sales “Roman wants someone” on that event; “Send someone” books a person directly.' },
+  { path: '/approvals', click: TAB(3), el: ['.tabs ~ .card'], title: 'Flag the gaps', text: 'Tier 1–2 events where nobody from us goes yet. “Flag for sales” marks it “Needs someone” for sales; “Send someone” books a person directly.' },
   { path: '/approvals', click: TAB(4), el: ['.tabs ~ .card'], title: 'Suggestions', text: 'Events sales missed in the list. “Add to calendar” adds it and opens the editor for country, tier and fit.' },
   { path: '/insights', el: ['.kpis'], title: 'Overview', text: 'Where Bitcoin Suisse shows up, what it costs and what comes back. Every number updates as sales request, you decide and people debrief.' },
   { path: '/insights', el: ['#by-team'], title: 'By team and person', text: 'Trips, open debriefs, leads, rating and budget for each sales team. Click a team to see its people, click a person to see their events.' },
@@ -206,6 +206,7 @@ export function TourOffer({ onStart, onLater }: { onStart: () => void; onLater: 
     <div className="tour-offer" role="dialog" aria-label="Walkthrough">
       <b>New here?</b>
       <p>A one-minute walkthrough shows you how Circuit works.</p>
+      <p className="tip">Tip: set your own password under your name (top right) → Change password.</p>
       <div className="row"><button className="btn sm red" onClick={onStart}>Start the walkthrough</button><button className="btn sm ghost" onClick={onLater}>Not now</button></div>
     </div>
   );

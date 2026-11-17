@@ -563,6 +563,18 @@ details.more[open] summary { margin-bottom: 12px; }
 .tour-offer b { font-size: 15.5px; font-weight: 650; }
 .tour-offer p { font-size: 14px; color: var(--ink-2); margin-top: 4px; line-height: 1.5; }
 .tour-offer .row { display: flex; gap: 8px; margin-top: 12px; }
+.tour-offer .tip { font-size: 12.5px; color: var(--ink-3); }
+/* account */
+.acct { padding: 20px 22px; margin-bottom: 14px; }
+.acct dl { display: grid; gap: 12px; }
+.acct dl > div { display: grid; grid-template-columns: 110px 1fr; gap: 12px; }
+.acct dt { color: var(--ink-3); font-size: 13.5px; }
+.acct dd { font-weight: 560; overflow-wrap: anywhere; }
+.acct-f { display: grid; gap: 8px; max-width: 380px; }
+.acct-f label { font-size: 13.5px; font-weight: 560; margin-top: 6px; }
+.acct-f .err { color: var(--red-ink); font-size: 13.5px; }
+.acct-f .ok-t { color: var(--ok); font-size: 13.5px; font-weight: 560; }
+.acct-f > div { margin-top: 10px; }
 @media (max-width: 640px) {
   .tour-card { top: auto !important; left: 12px !important; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); width: auto; }
   .tour-offer { right: 12px; left: 12px; width: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
