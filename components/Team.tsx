@@ -5,7 +5,7 @@ import { useApp, h } from './AppProvider';
 import Link from 'next/link';
 import { Blank } from './ui';
 import { IcUsers } from './icons';
-import { MS, ML, ROLE_LABEL, mIdx, dateLabel, place, type Req } from '@/lib/model';
+import { MS, ML, roleText, mIdx, dateLabel, place, type Req } from '@/lib/model';
 
 export default function Team() {
   const { data, ev, people, open, today, me } = useApp();
@@ -59,7 +59,7 @@ export default function Team() {
               <tr key={'g' + g} className="team"><td colSpan={months.length + 3}>{g}</td></tr>,
               ...ps.map(p => (
                 <tr key={p.id}>
-                  <td className="who"><b>{p.name}{p.id === me.id ? ' (you)' : ''}</b><small>{[p.market, ROLE_LABEL[p.role]].filter(Boolean).join(' · ')}</small></td>
+                  <td className="who"><b>{p.name}{p.id === me.id ? ' (you)' : ''}</b><small>{[p.market, roleText(p)].filter(Boolean).join(' · ')}</small></td>
                   <td style={{ textAlign: 'right' }}><span className="load">{load(p.id) || <span className="dim">–</span>}</span></td>
                   {months.map(m => <td key={m}>{cell(p.id, m).map(pill)}</td>)}
                   <td>{later(p.id).map(pill)}</td>

@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from './AppProvider';
 import { Tier, Logo } from './ui';
 import { IcSearch, IcChevDown, IcHelp } from './icons';
-import { dateLabel, place, ROLE_LABEL, type Role } from '@/lib/model';
+import { dateLabel, place, roleText, type Role } from '@/lib/model';
 import Drawer from './Drawer';
 import Tour, { TourOffer } from './Tour';
 
@@ -65,12 +65,12 @@ export default function Shell({ children }: { children: React.ReactNode }) {
             <div className="me">
               <button onClick={() => setMenu(m => !m)} aria-expanded={menu} aria-haspopup="menu">
                 <span className="av">{me.initials}</span>
-                <span className="who"><b>{me.name}</b><span>{ROLE_LABEL[me.role]}{me.market ? ` · ${me.market}` : ''}</span></span>
+                <span className="who"><b>{me.name}</b><span>{roleText(me)}{me.market ? ` · ${me.market}` : ''}</span></span>
                 <IcChevDown s={14} />
               </button>
               {menu && (
                 <div className="menu" role="menu">
-                  <p><b>{me.name}</b>{me.email}<br />{ROLE_LABEL[me.role]}{me.team ? ` · ${me.team}` : ''}</p>
+                  <p><b>{me.name}</b>{me.email}<br />{roleText(me)}{me.team ? ` · ${me.team}` : ''}</p>
                   <Link href="/my" role="menuitem">My events</Link>
                   <Link href="/discover" role="menuitem">All events</Link>
                   <button role="menuitem" onClick={() => setTour(true)}>Walkthrough</button>

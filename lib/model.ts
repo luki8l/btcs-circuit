@@ -49,6 +49,8 @@ export const POLICY: Record<number, [string, string]> = {
   0: ['Not rated yet', 'Not part of the 2027 rating round yet.'],
 };
 export const ROLE_LABEL: Record<Role, string> = { admin: 'Admin', events: 'Approver', management: 'Read-only', sales: 'Sales' };
+/** what shows under a name: Roman's title (CEO) instead of "Approver"; everyone else their role */
+export const roleText = (p: Pick<Person, 'role' | 'title'>) => p.role === 'events' && p.title ? p.title : ROLE_LABEL[p.role];
 export const ROLE_HINT: Record<Role, string> = {
   admin: 'Everything, plus accounts',
   events: 'Approves requests, flags events, keeps the catalogue (Roman)',
