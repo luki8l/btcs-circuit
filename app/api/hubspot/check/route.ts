@@ -4,7 +4,7 @@
 // No contact or deal records are returned, only whether they can be read.
 import { NextResponse } from 'next/server';
 import { rpcClient, statusOf, messageOf } from '@/lib/rpc';
-import { hsGet, hubspotConfigured, type HsResult } from '@/lib/hubspot';
+import { hsGet, hsScopes, hubspotConfigured, type HsResult } from '@/lib/hubspot';
 import type { Data } from '@/lib/model';
 
 export const runtime = 'nodejs';
@@ -25,7 +25,9 @@ export async function GET() {
   if (data.me.role !== 'admin') return NextResponse.json({ error: 'Admins only.' }, { status: 403 });
   if (!hubspotConfigured()) return NextResponse.json({ connected: false, error: 'HUBSPOT_SERVICE_KEY is not set in Vercel (or the app was not redeployed since).' }, { status: 503 });
 
-  const [account, events, eventsV3, campaigns, contacts, contactProps, deals, dealProps, pipelines, owners] = await Promise.all([
+  const [scopes, schemas, account, events, eventsV3, campaigns, contacts, contactProps, deals, dealProps, pipelines, owners] = await Promise.all([
+    hsScopes(),
+    hsGet<{ results: { name: string; objectTypeId: string; labels?: { singular?: string; plural?: string }; properties?: { name: string; label: string; type: string; hubspotDefined?: boolean }[] }[] }>('/crm/v3/schemas'),
     hsGet<Record<string, unknown>>('/account-info/v3/details'),
     hsGet<{ results?: Record<string, unknown>[]; total?: number }>('/marketing/marketing-events/2026-09?limit=100'),
     hsGet<{ results?: Record<string, unknown>[]; total?: number }>('/marketing/v3/marketing-events?limit=100'),
@@ -46,6 +48,8 @@ export async function GET() {
   return NextResponse.json({
     connected: true,
     checkedAt: new Date().toISOString(),
+    scopes: scopes.ok ? (scopes.data?.scopes || []).slice().sort() : access(scopes),
+    customObjects: schemas.ok ? schemas.data!.results.map(o => ({ name: o.name, id: o.objectTypeId, label: o.labels?.plural || o.labels?.singular, fields: (o.properties || []).filter(p => !p.hubspotDefined).map(p => `${p.label} (${p.name}, ${p.type})`) })) : access(schemas),
     access: {
       accountInfo: access(account), marketingEvents: access(events), marketingEventsV3: access(eventsV3), campaigns: access(campaigns),
       contactsRead: access(contacts), contactProperties: access(contactProps), dealsRead: access(deals), dealProperties: access(dealProps),
