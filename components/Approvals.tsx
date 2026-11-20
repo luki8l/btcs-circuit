@@ -154,7 +154,7 @@ export default function Approvals() {
                 <td><div style={{ display: 'flex', gap: 8, alignItems: 'center' }}><Av p={people.get(r.personId)} size="sm" />{people.get(r.personId)?.name}</div></td>
                 <td><span className={`pill ${r.status === 'approved' ? 'ok' : 'off'}`}>{r.status === 'approved' ? 'Approved' : 'Declined'}</span></td>
                 <td className="nowrap">{people.get(r.decidedBy || '')?.name || '–'}</td>
-                <td className="nowrap dim">{new Date(r.decidedAt!).toLocaleDateString('de-CH')}</td>
+                <td className="nowrap dim">{new Date(r.decidedAt!).toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich' })}</td>
                 <td className="dim" style={{ maxWidth: 280 }}>{r.decisionNote || '–'}</td>
                 <td className="r">{!ro && !r.rating && <Confirm label="Reopen" sure="Back to inbox" disabled={busy} onYes={() => act('request_reopen', { p_id: r.id }, 'Back in the inbox')} />}</td>
               </tr>

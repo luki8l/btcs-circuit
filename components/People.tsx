@@ -101,7 +101,7 @@ export default function People({ people, feed, secretKey, microsoft = false }: {
                 <td><span className={`pill ${p.role === 'admin' ? 'red' : p.role === 'events' ? 'wait' : ''}`}>{ROLE_LABEL[p.role]}</span></td>
                 <td>{p.market || <span className="dim">–</span>}</td>
                 <td>{p.team || <span className="dim">–</span>}</td>
-                <td className="dim nowrap">{p.lastSignIn ? new Date(p.lastSignIn).toLocaleDateString('de-CH') : 'never'}</td>
+                <td className="dim nowrap">{p.lastSignIn ? new Date(p.lastSignIn).toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich' }) : 'never'}</td>
                 <td>{p.active ? <span className="pill ok"><i />Active</span> : <span className="pill off">Deactivated</span>}</td>
                 <td className="r nowrap">
                   {!microsoft && <button className="btn ghost sm" disabled={pending || !secretKey} onClick={() => start(async () => { const r = await newLink(p.email, p.id); setRes(r); if (r.link) { copy(r.link); window.scrollTo({ top: 0, behavior: 'smooth' }); } else if (r.err) toast(r.err, true); })}><IcLink s={13} />Sign-in link</button>}
@@ -116,7 +116,7 @@ export default function People({ people, feed, secretKey, microsoft = false }: {
       <section className="sect">
         <h2 className="h2">Activity</h2><p className="lede">The last 80 changes. Kept in the database, can’t be edited.</p>
         <div className="card">{feed.length ? feed.map((a, i) => (
-          <div key={i} className="mine" style={{ gridTemplateColumns: '150px minmax(0,1fr)', padding: '10px 16px' }}><span className="dim small">{new Date(a.at).toLocaleString('de-CH', { dateStyle: 'short', timeStyle: 'short' })}</span><span className="small">{describe(a)}</span></div>
+          <div key={i} className="mine" style={{ gridTemplateColumns: '150px minmax(0,1fr)', padding: '10px 16px' }}><span className="dim small">{new Date(a.at).toLocaleString('de-CH', { timeZone: 'Europe/Zurich', dateStyle: 'short', timeStyle: 'short' })}</span><span className="small">{describe(a)}</span></div>
         )) : <div className="empty">Nothing yet.</div>}</div>
       </section>
     </main>

@@ -50,7 +50,7 @@ export default function HubSpotPanel({ e }: { e: Ev }) {
   return (
     <div className="hs">
       <p className="hs-state">
-        {e.hubspotId ? <><span className="pill ok"><IcCheck s={12} />In HubSpot</span><span className="dim small">last sent {e.hubspotSyncedAt ? new Date(e.hubspotSyncedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : ''}</span></>
+        {e.hubspotId ? <><span className="pill ok"><IcCheck s={12} />In HubSpot</span><span className="dim small">last sent {e.hubspotSyncedAt ? new Date(e.hubspotSyncedAt).toLocaleDateString('en-GB', { timeZone: 'Europe/Zurich', day: 'numeric', month: 'short', year: 'numeric' }) : ''}</span></>
           : <span className="dim small">Not in HubSpot yet.</span>}
         {!pv && <button className="btn line sm" disabled={busy} onClick={preview} style={{ marginLeft: 'auto' }}>{busy ? 'Checking…' : e.hubspotId ? 'Check HubSpot' : 'Prepare for HubSpot'}</button>}
       </p>

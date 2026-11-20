@@ -11,7 +11,7 @@ const errs = [];
 const NEW = `neu-${Date.now().toString(36)}@example.com`;
 
 async function ctx(b, tag) {
-  const c = await b.newContext({ viewport: { width: 1440, height: 950 } });
+  const c = await b.newContext({ viewport: { width: 1440, height: 950 }, timezoneId: 'Europe/Vienna' });   // server runs in UTC, people in Vienna: dates must still match
   await c.addInitScript(() => { window.__csp = []; document.addEventListener('securitypolicyviolation', e => window.__csp.push(e.violatedDirective + ' ' + e.blockedURI)); });
   const p = await c.newPage();
   p.on('pageerror', e => errs.push(tag + ' PAGEERR: ' + e.message));

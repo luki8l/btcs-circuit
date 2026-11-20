@@ -38,7 +38,7 @@ echo "→ production server on port $PORT (postgres mode)"
 rm -rf "$SA/.next/static" "$SA/public"; cp -r .next/static "$SA/.next/static"; cp -r public "$SA/public"
 APP_URL="http://localhost:$PORT"
 APP_DB_URL=$(node -e 'const u = new URL(process.argv[1] + "/" + process.argv[2]); u.username = process.argv[3]; u.password = process.argv[4]; console.log(u.href)' "$ADMIN" "$DB" "$APP_ROLE" "$APP_PW")
-( cd "$SA" && exec env CIRCUIT_BACKEND=postgres NODE_ENV=production PORT=$PORT HOSTNAME=127.0.0.1 \
+( cd "$SA" && exec env TZ=UTC CIRCUIT_BACKEND=postgres NODE_ENV=production PORT=$PORT HOSTNAME=127.0.0.1 \
     DATABASE_URL="$APP_DB_URL" \
     CIRCUIT_SESSION_SECRET="$(node -e 'console.log(require("crypto").randomBytes(32).toString("base64url"))')" \
     SITE_URL="$APP_URL" ENTRA_ISSUER=http://127.0.0.1:3201 ENTRA_ALLOW_INSECURE_ISSUER=1 ENTRA_TENANT_ID=test-tenant-0000 \
