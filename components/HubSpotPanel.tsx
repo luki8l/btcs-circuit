@@ -15,7 +15,8 @@ type Preview = { fields: Field[]; tz: string; notes: string[]; linked: Rec | nul
 const isDate = (k: string) => k.endsWith('_date');
 
 export default function HubSpotPanel({ e }: { e: Ev }) {
-  const { toast } = useApp();
+  const { toast, presence } = useApp();
+  const going = presence(e.id).approved.length;
   const router = useRouter();
   const [pv, setPv] = useState<Preview | null>(null);
   const [busy, setBusy] = useState(false);
@@ -63,7 +64,9 @@ export default function HubSpotPanel({ e }: { e: Ev }) {
           })}</tbody>
         </table>
         <ul className="hs-notes">{pv.notes.map(n => <li key={n}>{n}</li>)}</ul>
-        {!pv.auto && <p className="dim small">Automatic sync is off: nothing goes to HubSpot unless you press a button here.</p>}
+        <p className="dim small">{pv.auto
+          ? (e.hubspotId ? 'Automatic: when you edit this event, HubSpot is updated.' : going ? 'Automatic: this goes to HubSpot when someone is approved. If it did not, create it here.' : 'Automatic: this goes to HubSpot as soon as you approve someone for it.')
+          : 'Automatic sync is off: nothing goes to HubSpot unless you press a button here.'}</p>
 
         {pv.linked && <div className="hs-act">
           <a className="btn ghost sm" href={pv.linked.url} target="_blank" rel="noopener noreferrer">Open in HubSpot <IcExt s={13} /></a>
@@ -84,7 +87,7 @@ export default function HubSpotPanel({ e }: { e: Ev }) {
             </div>)}
           </div>}
           <div className="hs-act">
-            {(twin || pv.candidates.some(c => c.exact && !c.linkedTo))
+            {pv.auto && !going ? null : (twin || pv.candidates.some(c => c.exact && !c.linkedTo))
               ? <Confirm className="btn line sm" label="Create a new one anyway" sure="Yes, create a second one" disabled={busy} onYes={() => write('create', 'Created in HubSpot', { force: true })} />
               : <Confirm className="btn sm" label="Create in HubSpot" sure="Yes, create it in HubSpot" disabled={busy} onYes={() => write('create', 'Created in HubSpot')} />}
             <button className="btn ghost sm" onClick={() => { setPv(null); setErr(''); }}>Close</button>
