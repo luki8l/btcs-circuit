@@ -130,6 +130,31 @@ ok(!(await call(ANA, 'bootstrap')).people.some(x => x.id === BEN), 'deactivated 
 ok((await call(ROM, 'activity_feed', { p_limit: 100 })).length > 10, 'activity is logged');
 ok(await err(call(ANA, 'activity_feed', { p_limit: 10 })) === '42501', 'sales cannot read the activity log');
 
+console.log('event times + HubSpot link');
+{
+  const t = await call(ROM, 'event_save', { p_id: null, p_data: { name: 'Timed', mode: 'exact', start: '2027-03-10', end: '2027-03-11', startTime: '09:30', endTime: '17:00', city: 'Lisbon', country: 'PT' } });
+  ok(t.startTime === '09:30' && t.endTime === '17:00' && t.hubspotId === null, 'times saved (09:30–17:00), not linked yet');
+  const m = await call(ROM, 'event_save', { p_id: t.id, p_data: { name: 'Timed', mode: 'month', start: '2027-03-01', startTime: '09:30' } });
+  ok(m.startTime === null && m.endTime === null, 'month only: no times');
+  ok(await err(call(ROM, 'event_save', { p_id: t.id, p_data: { name: 'Timed', mode: 'exact', start: '2027-03-10', startTime: '9.30' } })) === '22023', 'time must be HH:MM');
+  ok(await err(call(ROM, 'event_save', { p_id: t.id, p_data: { name: 'Timed', mode: 'exact', start: '2027-03-10', end: '2027-03-10', startTime: '18:00', endTime: '09:00' } })) === '22023', 'one-day event: end time after start time');
+  const n = await call(ROM, 'event_save', { p_id: t.id, p_data: { name: 'Timed', mode: 'exact', start: '2027-03-10', end: '2027-03-12', startTime: '18:00', endTime: '09:00' } });
+  ok(n.startTime === '18:00' && n.endTime === '09:00', 'several days: end time may be earlier in the day');
+  ok(await err(call(ANA, 'event_hubspot_link', { p_id: t.id, p_hubspot_id: '123', p_action: 'created' })) === '42501', 'sales cannot link to HubSpot');
+  const l = await call(ROM, 'event_hubspot_link', { p_id: t.id, p_hubspot_id: '470000000001', p_action: 'created' });
+  ok(l.hubspotId === '470000000001' && !!l.hubspotSyncedAt, 'Roman links the event to a HubSpot record');
+  const other = await call(ROM, 'event_save', { p_id: null, p_data: { name: 'Other', mode: 'tbd' } });
+  ok(await err(call(ROM, 'event_hubspot_link', { p_id: other.id, p_hubspot_id: '470000000001', p_action: 'linked' })) === '23505', 'one HubSpot record links to one event only');
+  ok(await err(call(ROM, 'event_hubspot_link', { p_id: other.id, p_hubspot_id: '12a', p_action: 'linked' })) === '22023', 'HubSpot id: digits only');
+  ok(await err(call(ROM, 'event_hubspot_link', { p_id: other.id, p_hubspot_id: '5', p_action: 'deleted' })) === '22023', 'unknown action refused');
+  const kept = await call(ROM, 'event_save', { p_id: t.id, p_data: { name: 'Timed renamed', mode: 'exact', start: '2027-03-10' } });
+  ok(kept.hubspotId === '470000000001', 'editing the event keeps the HubSpot link');
+  const u = await call(ROM, 'event_hubspot_link', { p_id: t.id, p_hubspot_id: null, p_action: 'unlinked' });
+  ok(u.hubspotId === null && u.hubspotSyncedAt === null, 'unlink');
+  const logged = (await db.query(`select count(*) n from public.activity where action in ('hubspot_created', 'hubspot_unlinked') and event_id = $1`, [t.id])).rows[0].n;
+  ok(Number(logged) === 2, 'HubSpot links are in the activity log');
+}
+
 console.log('security');
 ok(await err(as(ANA, 'select * from public.profiles')) === '42501' && await err(as(ADM, 'select * from public.requests')) === '42501', 'tables not readable directly, only through the functions');
 ok(await err(call(ROM, 'event_save', { p_id: null, p_data: { name: 'Bad link', mode: 'tbd', website: 'javascript:alert(1)' } })) === '23514', 'event link must be a web link');

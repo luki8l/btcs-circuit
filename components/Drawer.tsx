@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from './AppProvider';
 import { Tier, Av } from './ui';
 import { IcX, IcBack, IcCal, IcPin, IcExt, IcFlag, IcWarn, IcCheck, IcUsers, IcEdit } from './icons';
+import HubSpotPanel from './HubSpotPanel';
+import { eventTz, eventTimeText, tzLabel } from '@/lib/tz';
 import { GROUPS, GS, MODES, TICKETS, POLICY, REGIONS, REGION_LABEL, SIZES, dateLabel, place, isStaff, chf, ymd, countryName, type Ev, type Mode, type Ticket, type Req } from '@/lib/model';
 
 export default function Drawer() {
@@ -39,7 +41,7 @@ function Head({ e, back }: { e: Ev; back?: () => void }) {
       </div>
       <h2 className="title">{e.name}</h2>
       <div className="dr-meta">
-        <span><IcCal s={15} />{dateLabel(e)}</span>
+        <span><IcCal s={15} />{dateLabel(e)}{eventTimeText(e) ? ` · ${eventTimeText(e)}` : ''}</span>
         <span><IcPin s={15} />{place(e)}</span>
         {e.website && /^https?:\/\//.test(e.website) && <a href={e.website} target="_blank" rel="noopener noreferrer">Website <IcExt s={13} /></a>}
       </div>
@@ -139,6 +141,7 @@ function Detail({ e }: { e: Ev }) {
               <button className="btn line sm" onClick={() => open({ kind: 'event', id: e.id, view: 'assign' })}><IcUsers s={14} />{e.past ? 'Log who was there' : 'Send someone'}</button>
               <button className="btn line sm" onClick={() => open({ kind: 'edit', id: e.id })}><IcEdit s={14} />Edit event</button>
             </div>
+            <HubSpotPanel e={e} />
           </section>
         )}
       </div>
@@ -339,12 +342,12 @@ function Suggest() {
   );
 }
 
-const EMPTY = { name: '', website: '', mode: 'exact', start: '', end: '', dateNote: '', region: 'EU', country: '', city: '', kind: '', focus: '', tier: '', audience: '', size: '', costTicket: '', costSponsor: '', notes: '', fit: ['', '', '', '', ''] };
+const EMPTY = { name: '', website: '', mode: 'exact', start: '', end: '', startTime: '', endTime: '', dateNote: '', region: 'EU', country: '', city: '', kind: '', focus: '', tier: '', audience: '', size: '', costTicket: '', costSponsor: '', notes: '', fit: ['', '', '', '', ''] };
 function Editor({ id }: { id: number | null }) {
   const { ev, close, act, busy, open } = useApp();
   const e = id ? ev.get(id) : undefined;
   const [f, setF] = useState(() => e ? {
-    name: e.name, website: e.website || '', mode: e.mode, start: e.sd ? ymd(e.sd) : '', end: e.ed ? ymd(e.ed) : '', dateNote: e.dateNote || '', region: e.region, country: e.country === 'TBA' ? '' : e.country,
+    name: e.name, website: e.website || '', mode: e.mode, start: e.sd ? ymd(e.sd) : '', end: e.ed ? ymd(e.ed) : '', startTime: e.startTime || '', endTime: e.endTime || '', dateNote: e.dateNote || '', region: e.region, country: e.country === 'TBA' ? '' : e.country,
     city: e.city || '', kind: e.kind || '', focus: e.focus || '', tier: e.tier ? String(e.tier) : '', audience: e.audience || '', size: e.size || '', costTicket: e.costTicket || '',
     costSponsor: e.costSponsor || '', notes: e.notes || '', fit: e.fit.map(x => x == null ? '' : String(x)),
   } : EMPTY);
@@ -355,7 +358,8 @@ function Editor({ id }: { id: number | null }) {
     if (!f.name.trim()) { setErr('Add a name.'); return; }
     if (f.mode !== 'tbd' && !f.start) { setErr('Add a start date (or choose “date TBD”).'); return; }
     if (f.mode === 'exact' && f.end && f.end < f.start) { setErr('The end is before the start.'); return; }
-    const p_data = { ...f, start: f.mode === 'month' && f.start ? f.start.slice(0, 7) + '-01' : f.start, end: f.mode === 'exact' ? (f.end || f.start) : f.start, tier: f.tier ? Number(f.tier) : null, fit: f.fit.map(x => x ? Number(x) : null) };
+    if (f.mode === 'exact' && f.startTime && f.endTime && (!f.end || f.end === f.start) && f.endTime <= f.startTime) { setErr('The end time is before the start time.'); return; }
+    const p_data = { ...f, start: f.mode === 'month' && f.start ? f.start.slice(0, 7) + '-01' : f.start, end: f.mode === 'exact' ? (f.end || f.start) : f.start, tier: f.tier ? Number(f.tier) : null, fit: f.fit.map(x => x ? Number(x) : null), startTime: f.mode === 'exact' ? f.startTime : '', endTime: f.mode === 'exact' ? f.endTime : '' };
     const r = await act<{ id: number }>('event_save', { p_id: id, p_data }, id ? 'Event saved' : 'Event added');
     if (r.ok && r.data) open({ kind: 'event', id: r.data.id, view: 'detail' }); else if (!r.ok) setErr(r.error || '');
   }
@@ -368,6 +372,8 @@ function Editor({ id }: { id: number | null }) {
         <div className="q">
           <div className="field" style={{ marginBottom: 12 }}><span className="fl">Date</span><div className="seg">{[['exact', 'Exact dates'], ['month', 'Month only'], ['tbd', 'Date TBD']].map(([k, l]) => <button type="button" key={k} aria-pressed={f.mode === k} onClick={() => setF({ ...f, mode: k })}>{l}</button>)}</div></div>
           {f.mode === 'exact' && <div className="row2"><div className="field"><label htmlFor="es">Start</label><input id="es" className="input" type="date" value={f.start} onChange={set('start')} /></div><div className="field"><label htmlFor="ee">End</label><input id="ee" className="input" type="date" value={f.end} onChange={set('end')} /></div></div>}
+          {f.mode === 'exact' && <><div className="row2" style={{ marginTop: 10 }}><div className="field"><label htmlFor="est">Start time <span className="dim">(optional)</span></label><input id="est" className="input" type="time" value={f.startTime} onChange={set('startTime')} /></div><div className="field"><label htmlFor="eet">End time <span className="dim">(optional)</span></label><input id="eet" className="input" type="time" value={f.endTime} onChange={set('endTime')} /></div></div>
+            <span className="dim small">{(() => { const z = eventTz({ city: f.city, country: f.country || 'TBA' }); return z.guessed ? 'Local time at the event. Add city and country so HubSpot gets the right time zone.' : `Local time at the event (${tzLabel(z.tz)}). Without times, HubSpot gets the whole day.`; })()}</span></>}
           {f.mode === 'month' && <div className="row2"><div className="field"><label htmlFor="em">Month</label><input id="em" className="input" type="month" value={f.start.slice(0, 7)} onChange={x => setF({ ...f, start: x.target.value ? x.target.value + '-01' : '' })} /></div><div className="field"><label htmlFor="edn">Note</label><input id="edn" className="input" value={f.dateNote} onChange={set('dateNote')} placeholder="e.g. usually June" maxLength={80} /></div></div>}
         </div>
         <div className="q"><div className="row3">

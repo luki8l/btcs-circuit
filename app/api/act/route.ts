@@ -1,6 +1,9 @@
 // One endpoint for every change: { fn, args } → the database function of the same name, as the signed-in user.
 // Only the functions listed here can be called, each with validated input; the database checks roles and rules again.
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
+import { sameOrigin } from '@/lib/origin';
+import { hubspotConfigured } from '@/lib/hubspot';
+import { autoSyncOn } from '@/lib/hubspot-event';
 import { z } from 'zod';
 import { rpcClient, statusOf, messageOf } from '@/lib/rpc';
 
@@ -19,6 +22,7 @@ const eventData = z.object({
   kind: text(120).optional().nullable(), focus: text(300).optional().nullable(), tier: z.number().int().min(1).max(5).nullable().optional(),
   audience: text(300).optional().nullable(), size: text(12).optional().nullable(), costTicket: text(300).optional().nullable(), costSponsor: text(400).optional().nullable(),
   notes: text(4000).optional().nullable(), fit: z.array(z.number().int().min(1).max(5).nullable()).length(5).optional(),
+  startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional().nullable().or(z.literal('')), endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional().nullable().or(z.literal('')),
 });
 
 const FNS: Record<string, z.ZodTypeAny> = {
@@ -38,14 +42,6 @@ const FNS: Record<string, z.ZodTypeAny> = {
   activity_feed: z.object({ p_limit: z.number().int().min(1).max(500) }),
 };
 
-/** calls from this app's own pages only: same origin, JSON (a form or page on another site can't post here) */
-function sameOrigin(req: Request) {
-  const h = req.headers, site = h.get('sec-fetch-site'), origin = h.get('origin'), host = h.get('x-forwarded-host') || h.get('host');
-  if (site && site !== 'same-origin') return false;
-  if (origin) { try { if (new URL(origin).host !== host) return false; } catch { return false; } }
-  return (h.get('content-type') || '').toLowerCase().startsWith('application/json');
-}
-
 export async function POST(req: Request) {
   if (!sameOrigin(req)) return NextResponse.json({ error: 'not allowed' }, { status: 403 });
   let raw: unknown = null;
@@ -59,6 +55,10 @@ export async function POST(req: Request) {
   try {
     const rpc = await rpcClient();
     const data = await rpc(fn, parsed.data as Record<string, unknown>);
+    // HubSpot (only when switched on): approvals create the event there, edits of linked events update it
+    if (autoSyncOn() && hubspotConfigured() && ['request_decide', 'request_assign', 'event_save'].includes(fn)) {
+      after(async () => { try { const { autoSync } = await import('@/lib/hubspot-auto'); await autoSync(fn, parsed.data as Record<string, unknown>, data, rpc); } catch (e) { console.error('hubspot auto', e); } });
+    }
     return NextResponse.json({ ok: true, data }, { headers: { 'cache-control': 'no-store' } });
   } catch (e) {
     const status = statusOf(e);

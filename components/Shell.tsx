@@ -42,8 +42,9 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   // My events: steps left (HubSpot, debrief) plus decisions not seen yet
   const started = (id: number) => { const e = ev.get(id); return !!e && !!e.sd && e.mode !== 'tbd' && e.sd <= today; };
   const mine = data.requests.filter(r => r.personId === me.id);
-  const steps = mine.filter(r => r.status === 'approved' && !r.rating && (!r.hubspot || started(r.eventId))).length;
-  const unseen = mine.filter(r => isNew(r) && !(r.status === 'approved' && !r.rating && (!r.hubspot || started(r.eventId)))).length;
+  const inHs = (r: { hubspot: boolean; eventId: number }) => r.hubspot || !!ev.get(r.eventId)?.hubspotId;
+  const steps = mine.filter(r => r.status === 'approved' && !r.rating && (!inHs(r) || started(r.eventId))).length;
+  const unseen = mine.filter(r => isNew(r) && !(r.status === 'approved' && !r.rating && (!inHs(r) || started(r.eventId)))).length;
   const todo = steps + unseen;
   useEffect(() => { if (!menu) return; const c = () => setMenu(false); setTimeout(() => document.addEventListener('click', c, { once: true }), 0); return () => document.removeEventListener('click', c); }, [menu]);
   async function signOut() { await fetch('/auth/signout', { method: 'POST' }); location.assign('/login'); }

@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "test:sql": "node tests/sql.test.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:hubspot": "node tests/hubspot.test.mjs"
   },
   "dependencies": {
     "@react-pdf/renderer": "4.9.0",

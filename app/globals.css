@@ -649,3 +649,16 @@ details.more[open] summary { margin-bottom: 12px; }
 .stat span { font-size: 12.5px; color: var(--ink-3); }
 .stat.red b { color: var(--red); }
 .stat b .of { font-size: .55em; color: var(--ink-3); }
+
+/* HubSpot panel (Roman's tools in the event drawer) */
+.hs { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); display: grid; gap: 10px; }
+.hs-state { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0; }
+
+.hs-t { font-size: 13px; } .hs-t td, .hs-t th { padding: 8px 10px; } .hs-t td:first-child { white-space: nowrap; }
+.hs-t .hs-diff { color: var(--red-ink); font-weight: 600; }
+.hs-notes { margin: 0; padding-left: 18px; font-size: 12.5px; color: var(--ink-2); display: grid; gap: 3px; }
+.hs-act { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.hs-cands { display: grid; gap: 6px; }
+.hs-c { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+.hs-c b { font-weight: 600; margin-right: 6px; } .hs-c small { display: block; margin-top: 2px; }
+.hs-c-a { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }

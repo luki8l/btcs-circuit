@@ -43,6 +43,17 @@ Browser ─► Next.js (Vercel, arn1) ─► /api/act { fn, args }  (zod-validat
 * **Browser**: Content Security Policy with a per-request nonce (only the app's own scripts run), no framing, no referrer to other sites, HSTS, Permissions-Policy, same-origin opener/resource policy. `/api/act` accepts same-origin JSON only; links in events and suggestions must be `http(s)://` (API, database and display).
 * **Dependencies**: `npm audit` clean (postcss and uuid pinned to patched versions via `overrides`).
 
+## HubSpot
+
+Circuit links each event to a record in HubSpot's custom object **Events** (one record per event, not per person) and sends
+four fields: Event Name, Event Location ("City, Country"), Event Start Date, Event End Date.
+
+* **Times**: events can have a start and end time (catalogue editor), meant as local time at the event. The time zone comes from the city or country (`lib/tz.ts`, Vienna if unknown). Without times, HubSpot gets the whole days (00:00 to 23:59). Month-only and TBD events go over without dates.
+* **Manual (now)**: in the event drawer, Roman and admins see the HubSpot panel. "Prepare for HubSpot" only reads: it shows what would be sent and HubSpot events that look the same (name, overlapping days in the event's time zone). Then: *Create in HubSpot*, *Link this one* (nothing written to HubSpot), *Update in HubSpot* (overwrites the four fields) or *Unlink* (HubSpot keeps the record). Sales see "Event is in HubSpot" instead of the manual step once an event is linked.
+* **Automatic (off)**: with `HUBSPOT_AUTO_SYNC=on` in Vercel, an approval or "Send someone" creates the record (an exact existing one is linked instead), and editing a linked event updates it. Runs after the response; errors are in the Vercel logs.
+* **Key**: `HUBSPOT_SERVICE_KEY` (Vercel, sensitive). Needs `crm.objects.custom.read` and `crm.objects.custom.write`. `GET /api/hubspot/check` (admins) shows what the key can see; it returns no contact or deal records.
+* **Tests**: `npm run test:hubspot` (fields, time zones), `tests/e2e-hubspot.mjs` against a local fake HubSpot (`CIRCUIT_HUBSPOT_FAKE=1`, nothing leaves the machine).
+
 ## Setup (once)
 
 1. Supabase project (EU region; this one runs in Stockholm, eu-north-1, so Vercel functions run in arn1 next to it). SQL Editor: run `supabase/migrations/*.sql` in order (the second file seeds the 267 masterlist events).

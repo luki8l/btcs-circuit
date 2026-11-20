@@ -4,6 +4,10 @@ export type Role = 'admin' | 'events' | 'management' | 'sales';
 export type Person = { id: string; name: string; initials: string; role: Role; market: string; team: string; title: string; active: boolean; email?: string };
 export type RawEvent = {
   id: number; name: string; website: string | null; start: string | null; end: string | null; mode: 'exact' | 'month' | 'tbd'; dateNote: string | null;
+  /** local times at the event (HH:MM), only with exact dates */
+  startTime?: string | null; endTime?: string | null;
+  /** the linked record in HubSpot's "Events" object */
+  hubspotId?: string | null; hubspotSyncedAt?: string | null;
   region: string; country: string; city: string | null; kind: string | null; focus: string | null; tier: number | null; tierPrev: number | null;
   ratingAvg: number | null; ratingSd: number | null; ratingMedian: number | null; ratingN: number; ratingDist: number[]; fit: (number | null)[];
   audience: string | null; size: string | null; costTicket: string | null; costSponsor: string | null; notes: string | null; history: string | null;

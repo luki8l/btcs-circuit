@@ -14,7 +14,8 @@ export default function MyEvents() {
   const mine = data.requests.filter(r => r.personId === me.id && r.status !== 'withdrawn');
   const byDate = (a: Req, b: Req) => (ev.get(a.eventId)?.sd?.getTime() ?? 9e15) - (ev.get(b.eventId)?.sd?.getTime() ?? 9e15);
   const started = (r: Req) => { const e = ev.get(r.eventId); return !!e && !!e.sd && e.mode !== 'tbd' && e.sd <= today; };
-  const needs = (r: Req) => r.status === 'approved' && !r.rating && (!r.hubspot || started(r));
+  const inHs = (r: Req) => r.hubspot || !!ev.get(r.eventId)?.hubspotId;
+  const needs = (r: Req) => r.status === 'approved' && !r.rating && (!inHs(r) || started(r));
   const act1 = mine.filter(needs).sort(byDate);
   const wait = mine.filter(r => r.status === 'requested').sort(byDate);
   const upc = mine.filter(r => r.status === 'approved' && !r.rating && !needs(r)).sort(byDate);
@@ -39,9 +40,10 @@ export default function MyEvents() {
             <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}><button className="btn sm line" onClick={() => open({ kind: 'event', id: e.id, view: 'edit-request', rid: r.id })}>Change</button>
               <Confirm label="Withdraw" sure="Yes, withdraw" disabled={busy} onYes={() => act('request_withdraw', { p_id: r.id }, 'Request withdrawn')} /></span></div>}
           {r.status === 'approved' && <>
-            <div className={`todo-i ${r.hubspot ? 'done' : ''}`}><span className={`check ${r.hubspot ? 'on' : ''}`}>{r.hubspot && <IcCheck s={12} />}</span><span className="lbl">Create the event in HubSpot</span>
+            {e.hubspotId ? <div className="todo-i done"><span className="check on"><IcCheck s={12} /></span><span className="lbl">Event is in HubSpot</span><span className="dim small" style={{ marginLeft: 'auto' }}>added by Circuit</span></div>
+            : <div className={`todo-i ${r.hubspot ? 'done' : ''}`}><span className={`check ${r.hubspot ? 'on' : ''}`}>{r.hubspot && <IcCheck s={12} />}</span><span className="lbl">Create the event in HubSpot</span>
               {!r.hubspot ? <button className="btn sm" disabled={busy} onClick={() => act('request_hubspot', { p_id: r.id, p_done: true }, 'HubSpot step done')}>Mark as done</button>
-                : !r.rating && <button className="btn ghost sm" disabled={busy} onClick={() => act('request_hubspot', { p_id: r.id, p_done: false })}>Undo</button>}</div>
+                : !r.rating && <button className="btn ghost sm" disabled={busy} onClick={() => act('request_hubspot', { p_id: r.id, p_done: false })}>Undo</button>}</div>}
             <div className={`todo-i ${r.rating ? 'done' : ''}`}><span className={`check ${r.rating ? 'on' : ''}`}>{r.rating ? <IcCheck s={12} /> : null}</span>
               <span className="lbl">{started(r) ? 'Assign leads in HubSpot and debrief' : 'After the event: assign leads and debrief'}</span>
               {r.rating ? <span className="dim small" style={{ marginLeft: 'auto' }}>{r.leads} leads · rated {r.rating}/5 · go again: {r.goAgain}</span>

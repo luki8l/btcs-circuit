@@ -76,7 +76,7 @@ export async function buildXlsx(R: Report, by: string): Promise<Buffer> {
     return [e.name, when(e), e.mode === 'exact' ? null : dateLabel(e), place(e), countryName(e.country) || null, tier(e), p?.name || 'Former colleague', p?.team || null, p?.market || null,
       STATUS[r.status], MODES[r.mode][0], TICKETS[r.ticket][0], r.ticket === 'paid' ? Number(r.cost) : null,
       r.groups.map(g => GS[g]).join(', '), r.meetingsPlanned || null, r.reason || null, r.decisionNote || null, by || null, r.decidedAt ? new Date(r.decidedAt) : null,
-      r.status === 'approved' ? (r.hubspot ? 'Yes' : 'No') : null, r.leads, r.meetingsHeld, r.rating, r.goAgain, r.debriefNote || null];
+      r.status === 'approved' ? (r.hubspot || e.hubspotId ? 'Yes' : 'No') : null, r.leads, r.meetingsHeld, r.rating, r.goAgain, r.debriefNote || null];
   };
   sheet(wb, 'Requests', [
     { header: 'Event', width: 40 }, { header: 'Date', width: 12, fmt: DATE }, { header: 'Date (approx.)', width: 18 }, { header: 'Place', width: 26 }, { header: 'Country', width: 16 }, { header: 'Tier', width: 6 },
