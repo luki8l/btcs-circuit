@@ -40,6 +40,14 @@ export async function GET() {
     hsGet<{ results: { firstName?: string; lastName?: string; archived?: boolean }[] }>('/crm/v3/owners?limit=500'),
   ]);
 
+  // the custom "Events" object (if any): its rules and the records already in it
+  type Schema = { name: string; objectTypeId: string; requiredProperties?: string[]; primaryDisplayProperty?: string; associatedObjects?: string[];
+                  properties?: { name: string; label: string; type: string; hubspotDefined?: boolean; options?: { label: string; value: string }[] }[] };
+  const evObj = schemas.ok ? schemas.data!.results.find(o => /event/i.test(o.name)) : undefined;
+  const [evSchema, evRecords] = evObj ? await Promise.all([
+    hsGet<Schema>(`/crm/v3/schemas/${evObj.objectTypeId}`),
+    hsGet<{ total?: number; results: { id: string; createdAt: string; properties: Record<string, string | null> }[] }>(`/crm/v3/objects/${evObj.objectTypeId}?limit=100&properties=event_name,event_location,event_start_date,event_end_date,event_type,event_format,event_audience,hs_created_by_user_id`),
+  ]) : [null, null];
   const ev = events.ok ? events : eventsV3;
   const evList = ev.ok ? (ev.data?.results || []) : [];
   const ownerNames = new Set(owners.ok ? owners.data!.results.map(o => fold(`${o.firstName || ''} ${o.lastName || ''}`)) : []);
@@ -55,6 +63,14 @@ export async function GET() {
       contactsRead: access(contacts), contactProperties: access(contactProps), dealsRead: access(deals), dealProperties: access(dealProps),
       dealPipelines: access(pipelines), owners: access(owners),
     },
+    eventsObject: evObj ? {
+      id: evObj.objectTypeId,
+      schema: evSchema?.ok ? {
+        required: evSchema.data!.requiredProperties, display: evSchema.data!.primaryDisplayProperty, associatedWith: evSchema.data!.associatedObjects,
+        choices: Object.fromEntries((evSchema.data!.properties || []).filter(p => !p.hubspotDefined && p.options?.length).map(p => [p.name, p.options!.map(o => `${o.label} = ${o.value}`)])),
+      } : evSchema && access(evSchema),
+      records: evRecords?.ok ? { count: evRecords.data!.results.length, more: !!(evRecords.data as { paging?: unknown }).paging, items: evRecords.data!.results.map(r => ({ id: r.id, created: r.createdAt, ...r.properties })) } : evRecords && access(evRecords),
+    } : null,
     account: account.ok ? Object.fromEntries(['portalId', 'accountType', 'timeZone', 'companyCurrency', 'dataHostingLocation', 'uiDomain'].map(k => [k, account.data![k]])) : null,
     marketingEvents: ev.ok ? {
       endpoint: events.ok ? '2026-09' : 'v3', total: ev.data?.total ?? evList.length,
