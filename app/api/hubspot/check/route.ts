@@ -18,12 +18,13 @@ const props = (r: HsResult<{ results: Prop[] }>) => r.ok ? r.data!.results
   .filter(p => RELEVANT.test(p.name) || RELEVANT.test(p.label) || RELEVANT.test(p.groupName))
   .map(p => ({ name: p.name, label: p.label, type: p.fieldType, custom: !p.hubspotDefined, options: p.options?.slice(0, 25).map(o => o.label) })) : access(r);
 
-export async function GET() {
+export async function GET(req: Request) {
   let data: Data;
   try { data = await (await rpcClient())<Data>('bootstrap'); }
   catch (e) { return NextResponse.json({ error: messageOf(e) }, { status: statusOf(e) }); }
   if (data.me.role !== 'admin') return NextResponse.json({ error: 'Admins only.' }, { status: 403 });
   if (!hubspotConfigured()) return NextResponse.json({ connected: false, error: 'HUBSPOT_SERVICE_KEY is not set in Vercel (or the app was not redeployed since).' }, { status: 503 });
+  if (new URL(req.url).searchParams.get('detail') === 'events') return eventsDetail();
 
   const [scopes, schemas, account, events, eventsV3, campaigns, contacts, contactProps, deals, dealProps, pipelines, owners] = await Promise.all([
     hsScopes(),
@@ -88,5 +89,46 @@ export async function GET() {
       circuitPeopleWithOwner: circuitPeople.filter(p => ownerNames.has(fold(p.name))).map(p => p.name),
       circuitPeopleWithoutOwner: circuitPeople.filter(p => !ownerNames.has(fold(p.name))).map(p => p.name),
     } : null,
+  }, { headers: { 'cache-control': 'no-store' } });
+}
+
+// ?detail=events — the "Events" object in depth: every field (incl. HubSpot's own, e.g. owner), how it is linked to
+// contacts / companies / deals, and per record the filled fields and HOW MANY records are linked (counts only,
+// never names or e-mails). Read only.
+async function eventsDetail() {
+  type P = { name: string; label: string; type: string; fieldType: string; hubspotDefined?: boolean; description?: string };
+  type S = { objectTypeId: string; name: string; properties: P[]; associations?: { toObjectTypeId: string; name?: string; id: string }[]; associatedObjects?: string[] };
+  const schemas = await hsGet<{ results: S[] }>('/crm/v3/schemas');
+  if (!schemas.ok) return NextResponse.json({ error: 'schemas: ' + schemas.error }, { status: 502 });
+  const obj = schemas.data!.results.find(o => o.name === 'events');
+  if (!obj) return NextResponse.json({ error: 'no "events" object' }, { status: 404 });
+  const full = await hsGet<S>(`/crm/v3/schemas/${obj.objectTypeId}`);
+  const sc = full.ok ? full.data! : obj;
+  const names = sc.properties.map(p => p.name);
+  const recs = await hsGet<{ results: { id: string; createdAt: string; properties: Record<string, string | null> }[] }>(`/crm/v3/objects/${obj.objectTypeId}?limit=100&properties=${names.join(',')}`);
+  const targets: [string, string][] = [['contacts', '0-1'], ['companies', '0-2'], ['deals', '0-3']];
+  const labels: Record<string, unknown> = {};
+  for (const [n, id] of targets) {
+    const l = await hsGet<{ results: { category: string; typeId: number; label: string | null }[] }>(`/crm/v4/associations/${obj.objectTypeId}/${id}/labels`);
+    labels[n] = l.ok ? l.data!.results.map(x => ({ typeId: x.typeId, label: x.label || '(unlabelled)' })) : { status: l.status, error: l.error };
+  }
+  const records = [];
+  for (const r of recs.ok ? recs.data!.results : []) {
+    const linked: Record<string, unknown> = {};
+    for (const [n, id] of targets) {
+      const a = await hsGet<{ results: { toObjectId: number; associationTypes: { label: string | null }[] }[] }>(`/crm/v4/objects/${obj.objectTypeId}/${r.id}/associations/${id}?limit=500`);
+      if (!a.ok) { linked[n] = { status: a.status, error: a.error }; continue; }
+      const byLabel: Record<string, number> = {};
+      a.data!.results.forEach(x => x.associationTypes.forEach(t => { const k = t.label || '(unlabelled)'; byLabel[k] = (byLabel[k] || 0) + 1; }));
+      linked[n] = { count: a.data!.results.length, byLabel };
+    }
+    records.push({ id: r.id, created: r.createdAt, filled: Object.fromEntries(Object.entries(r.properties).filter(([, v]) => v != null && v !== '')), linked });
+  }
+  return NextResponse.json({
+    object: { id: sc.objectTypeId, name: sc.name },
+    fields: sc.properties.map(p => ({ name: p.name, label: p.label, type: p.fieldType, custom: !p.hubspotDefined })),
+    associationDefinitions: sc.associations?.map(a => ({ to: a.toObjectTypeId, name: a.name })) ?? sc.associatedObjects ?? null,
+    associationLabels: labels,
+    records: recs.ok ? records : { status: recs.status, error: recs.error },
   }, { headers: { 'cache-control': 'no-store' } });
 }
