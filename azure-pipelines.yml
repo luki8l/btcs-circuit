@@ -1,0 +1,146 @@
+# Circuit on Azure DevOps: test → container image → database migrations → deploy.
+# Every setting IT has to fill in is in the "variables" block below or in the variable group "circuit-production".
+# Walkthrough: docs/HANDOVER.md → "Azure DevOps pipeline".
+#
+# Pull requests run the tests only. A push to main runs everything; the deploy stage waits for the approval
+# configured on the environment "circuit-production" (Pipelines → Environments), if IT sets one.
+
+trigger:
+  branches:
+    include: [main]
+pr:
+  branches:
+    include: [main]
+
+parameters:
+  - name: deployTarget        # where the container runs
+    displayName: Deploy to
+    type: string
+    default: containerapp
+    values: [containerapp, webapp]
+
+variables:
+  # --- fill in once (names of things in Azure; not secret) ---
+  azureServiceConnection: 'CHANGE-ME-azure-service-connection'   # Project settings → Service connections (Azure Resource Manager)
+  acrServiceConnection: 'CHANGE-ME-acr-service-connection'       # Project settings → Service connections (Docker Registry → Azure Container Registry)
+  acrLoginServer: 'CHANGE-ME.azurecr.io'
+  resourceGroup: 'CHANGE-ME-resource-group'
+  appName: 'CHANGE-ME-circuit'                                    # the Container App or the Web App
+  imageRepository: 'circuit'
+  imageTag: '$(Build.BuildId)'
+
+stages:
+  - stage: Test
+    jobs:
+      - job: test
+        displayName: Typecheck, unit tests, build, Azure-mode end to end
+        pool: { vmImage: ubuntu-latest }
+        steps:
+          - task: NodeTool@0
+            inputs: { versionSpec: '22.x' }
+          - script: npm ci --no-audit --no-fund
+            displayName: Install
+          - script: npm run typecheck
+            displayName: Typecheck
+          - script: npm run test:sql && npm run test:hubspot
+            displayName: Database and HubSpot unit tests
+          - script: npm run build
+            displayName: Production build
+          # the Azure mode end to end: a PostgreSQL 16 container with a non-superuser admin (like Azure's),
+          # Microsoft sign-in against a stand-in provider, a browser walking through the app
+          - script: |
+              set -e
+              docker run -d --name pg -p 5432:5432 -e POSTGRES_PASSWORD=ci-superuser postgres:16
+              for i in $(seq 1 30); do docker exec pg pg_isready -U postgres >/dev/null 2>&1 && break; sleep 1; done
+              sleep 2
+              docker exec pg psql -U postgres -c "create role azadmin login createdb createrole password 'ci-admin'"
+              npx playwright install --with-deps chromium
+              PG_ADMIN_URL=postgres://azadmin:ci-admin@127.0.0.1:5432 npm run test:e2e:postgres
+            displayName: Azure mode end to end (PostgreSQL + Microsoft sign-in stand-in)
+
+  - stage: Image
+    dependsOn: Test
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - job: image
+        displayName: Build and push the container image
+        pool: { vmImage: ubuntu-latest }
+        steps:
+          - task: Docker@2
+            displayName: Build and push $(imageRepository):$(imageTag)
+            inputs:
+              command: buildAndPush
+              containerRegistry: $(acrServiceConnection)
+              repository: $(imageRepository)
+              Dockerfile: Dockerfile
+              buildContext: .
+              tags: |
+                $(imageTag)
+                latest
+
+  - stage: Deploy
+    dependsOn: Image
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    variables:
+      - group: circuit-production   # secret: MIGRATE_DATABASE_URL (database admin connection, see HANDOVER.md)
+    jobs:
+      - deployment: deploy
+        displayName: Migrate the database, then roll out
+        environment: circuit-production
+        pool: { vmImage: ubuntu-latest }   # the database must be reachable from here; for a private database use a self-hosted agent pool in the network
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: Docker@2
+                  displayName: Log in to the registry
+                  inputs: { command: login, containerRegistry: $(acrServiceConnection) }
+                # the same image runs the migrations: each file once, remembered in public.circuit_migrations
+                - script: |
+                    set -e
+                    docker run --rm -e DATABASE_URL $(acrLoginServer)/$(imageRepository):$(imageTag) node scripts/migrate.mjs --backend postgres
+                  displayName: Database migrations
+                  env:
+                    DATABASE_URL: $(MIGRATE_DATABASE_URL)
+                - ${{ if eq(parameters.deployTarget, 'containerapp') }}:
+                  - task: AzureCLI@2
+                    displayName: Roll out to the Container App
+                    inputs:
+                      azureSubscription: $(azureServiceConnection)
+                      scriptType: bash
+                      scriptLocation: inlineScript
+                      inlineScript: |
+                        set -e
+                        az extension add --name containerapp --upgrade --only-show-errors || true
+                        az containerapp update --name "$(appName)" --resource-group "$(resourceGroup)" \
+                          --image "$(acrLoginServer)/$(imageRepository):$(imageTag)" \
+                          --set-env-vars CIRCUIT_VERSION=$(imageTag) --output none
+                - ${{ if eq(parameters.deployTarget, 'webapp') }}:
+                  - task: AzureWebAppContainer@1
+                    displayName: Roll out to the Web App
+                    inputs:
+                      azureSubscription: $(azureServiceConnection)
+                      appName: $(appName)
+                      resourceGroupName: $(resourceGroup)
+                      containers: $(acrLoginServer)/$(imageRepository):$(imageTag)
+                      appSettings: -CIRCUIT_VERSION $(imageTag)
+                # the new version answers (its version number) and reaches its database
+                - task: AzureCLI@2
+                  displayName: Health check
+                  inputs:
+                    azureSubscription: $(azureServiceConnection)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -e
+                      if [ "${{ parameters.deployTarget }}" = containerapp ]; then
+                        host=$(az containerapp show --name "$(appName)" --resource-group "$(resourceGroup)" --query properties.configuration.ingress.fqdn -o tsv)
+                      else
+                        host=$(az webapp show --name "$(appName)" --resource-group "$(resourceGroup)" --query defaultHostName -o tsv)
+                      fi
+                      for i in $(seq 1 30); do
+                        body=$(curl -fsS "https://$host/api/health" || true)
+                        echo "$body" | grep -q '"db":"ok"' && echo "$body" | grep -q '"version":"$(imageTag)"' && { echo "healthy: $body"; exit 0; }
+                        sleep 10
+                      done
+                      echo "no healthy answer from https://$host/api/health: $body"; exit 1

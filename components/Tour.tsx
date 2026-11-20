@@ -16,6 +16,8 @@ type Step = {
   drawer?: (a: App) => DrawerState;     // a side panel to open for this step; other steps close it again
   title: string;
   text: string;
+  /** the text when people sign in with Microsoft, if different */
+  microsoft?: string;
 };
 
 // a real upcoming key event to show the event page and the request form on (nothing gets sent)
@@ -77,7 +79,7 @@ const MANAGEMENT: Step[] = [
 
 const ADMIN: Step[] = [
   ...EVENTS.slice(0, -1),
-  { path: '/people', el: ['.head'], title: 'People', text: 'Create accounts and set role, market and team. New people get a one-time link to set their own password.' },
+  { path: '/people', el: ['.head'], title: 'People', text: 'Create accounts and set role, market and team. New people get a one-time link to set their own password.', microsoft: 'Create accounts and set role, market and team. New people simply sign in with Microsoft.' },
   DONE,
 ];
 
@@ -189,7 +191,7 @@ export default function Tour({ onClose }: { onClose: () => void }) {
         <button className="x" onClick={finish} aria-label="Close the walkthrough"><IcX s={15} /></button>
         <span className="k">Walkthrough · {i + 1} of {steps.length}</span>
         <h3>{step.title}</h3>
-        <p>{step.text}</p>
+        <p>{app.microsoft && step.microsoft ? step.microsoft : step.text}</p>
         <div className="row">
           <span className="tour-dots" aria-hidden="true">{steps.map((_, n) => <i key={n} className={n === i ? 'on' : n < i ? 'done' : ''} />)}</span>
           {i > 0 && <button className="btn sm line" onClick={back}>Back</button>}
@@ -202,11 +204,12 @@ export default function Tour({ onClose }: { onClose: () => void }) {
 
 /** a small card on the first visit: offer the walkthrough once */
 export function TourOffer({ onStart, onLater }: { onStart: () => void; onLater: () => void }) {
+  const { microsoft } = useApp();
   return (
     <div className="tour-offer" role="dialog" aria-label="Walkthrough">
       <b>New here?</b>
       <p>A one-minute walkthrough shows you how Circuit works.</p>
-      <p className="tip">Tip: set your own password under your name (top right) → Change password.</p>
+      {!microsoft && <p className="tip">Tip: set your own password under your name (top right) → Change password.</p>}
       <div className="row"><button className="btn sm red" onClick={onStart}>Start the walkthrough</button><button className="btn sm ghost" onClick={onLater}>Not now</button></div>
     </div>
   );

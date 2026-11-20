@@ -9,14 +9,21 @@
     "start": "next start",
     "test:sql": "node tests/sql.test.mjs",
     "typecheck": "tsc --noEmit",
-    "test:hubspot": "node tests/hubspot.test.mjs"
+    "test:hubspot": "node tests/hubspot.test.mjs",
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:status": "node scripts/migrate.mjs --status",
+    "start:standalone": "node .next/standalone/server.js",
+    "test:e2e:postgres": "bash tests/postgres-e2e.sh"
   },
   "dependencies": {
     "@react-pdf/renderer": "4.9.0",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.118.0",
     "exceljs": "4.4.0",
+    "jose": "6.2.15",
     "next": "15.5.29",
+    "openid-client": "6.8.9",
+    "pg": "8.23.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "zod": "4.6.7"
@@ -24,7 +31,10 @@
   "devDependencies": {
     "@electric-sql/pglite": "0.5.15",
     "@types/node": "^22",
+    "@types/pg": "8.23.1",
     "@types/react": "^19",
+    "oidc-provider": "9.13.3",
+    "playwright": "1.63.0",
     "typescript": "^5"
   },
   "overrides": {

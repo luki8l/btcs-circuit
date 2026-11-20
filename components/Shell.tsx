@@ -18,7 +18,7 @@ const NAV: Record<Role, string[]> = {
 const LABEL: Record<string, string> = { discover: 'Events', my: 'My events', approvals: 'Requests', team: 'Team', catalogue: 'Catalogue', insights: 'Overview', people: 'People' };
 
 export default function Shell({ children }: { children: React.ReactNode }) {
-  const { me, data, palette, setPalette, ev, today, isNew, seen } = useApp();
+  const { me, data, palette, setPalette, ev, today, isNew, seen, microsoft } = useApp();
   const path = usePathname();
   const [menu, setMenu] = useState(false);
   // walkthrough: top-bar button, user menu, ?tour=1, a 'circuit:tour' event, and a one-time offer on the first visit
@@ -77,7 +77,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
                   <Link href="/my" role="menuitem">My events</Link>
                   <Link href="/discover" role="menuitem">All events</Link>
                   <button role="menuitem" onClick={() => setTour(true)}>Walkthrough</button>
-                  <Link href="/account" role="menuitem">Change password</Link>
+                  <Link href="/account" role="menuitem">{microsoft ? 'Your account' : 'Change password'}</Link>
                   <button role="menuitem" onClick={signOut}>Sign out</button>
                 </div>
               )}

@@ -6,6 +6,10 @@ sales log it in HubSpot and debrief afterwards. Management sees coverage, cost a
 **Pilot rule: the catalogue comes from the internal events masterlist and the accounts are real colleagues.
 Get IT and Compliance to sign off the hosting (Supabase eu-north-1 Stockholm / Vercel arn1) before rolling it out widely.**
 
+**Moving to Bitcoin Suisse infrastructure (Azure, Azure DevOps, Microsoft sign-in): [docs/HANDOVER.md](docs/HANDOVER.md).**
+The same code runs in two modes: the pilot (Vercel + Supabase, passwords) and `CIRCUIT_BACKEND=postgres` (any PostgreSQL,
+sign-in with Microsoft only, one Docker image, pipeline in `azure-pipelines.yml`).
+
 ## What's in it
 
 | Page | Who | What |
@@ -58,10 +62,12 @@ four fields: Event Name, Event Location ("City, Country"), Event Start Date, Eve
 
 1. Supabase project (EU region; this one runs in Stockholm, eu-north-1, so Vercel functions run in arn1 next to it). SQL Editor: run `supabase/migrations/*.sql` in order (the second file seeds the 267 masterlist events).
 2. Authentication → Sign-ups off. URL configuration: Site URL = the Vercel URL. Email OTP expiry: 3600 s (links valid 1 h).
-3. Vercel: import the repo, env vars `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` (server only), `NEXT_PUBLIC_SITE_URL`.
+3. Vercel: import the repo, env vars `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` (server only), `SITE_URL` (the older `NEXT_PUBLIC_…` names still work). All are read at runtime.
 4. First admin: create the user in Supabase (Authentication → Add user) with app metadata `{"role":"admin"}`, or `update public.profiles set role = 'admin' where email = '…';`.
 
 Later database changes come as new files in `supabase/migrations` (date-prefixed); never edit a migration that has run.
+`node scripts/migrate.mjs` (with `DATABASE_URL`) applies pending files and remembers them in `public.circuit_migrations`;
+`--status` shows what ran. This Supabase project is recorded there up to 20261120150000.
 
 ## Updating the catalogue from a new masterlist
 
@@ -76,3 +82,4 @@ The seed only runs on an empty catalogue; for updates edit events in the app (Ca
 * `npm run test:sql` — the migrations against real Postgres (PGlite): access rules, roles, requests, debriefs, accounts.
 * `CIRCUIT_LOCAL_DB=1 CIRCUIT_LOCAL_DEMO=1 CIRCUIT_LOCAL_ADMINS=you@x.com CIRCUIT_LOCAL_ROLES=roman@example.com:events,ceo@example.com:management npx next dev` — the whole app on an in-memory Postgres with made-up people and requests (`supabase/dev/demo.sql`); any e-mail, password `demo`. Development only, never in a production build.
 * `node tests/e2e.mjs` — browser walk-through of every role against the local app (screenshots in `.e2e-shots/`).
+* `PG_ADMIN_URL=postgres://admin:pw@host:5432 npm run test:e2e:postgres` — the Azure mode end to end (needs `npm run build`): fresh database, migrations as a non-superuser, the production server, Microsoft sign-in against a stand-in provider, a browser through every role. Details in docs/HANDOVER.md.

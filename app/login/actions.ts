@@ -2,6 +2,7 @@
 import { cookies } from 'next/headers';
 import { supabaseServer, fromFreshLink } from '@/lib/supabase';
 import { loginWait, loginNote, waitText } from '@/lib/throttle';
+import { isPostgres } from '@/lib/backend';
 
 /** e-mail as stored: lower case, no accents (ø → o, æ → ae, å → a, é → e, ü → u) */
 const plain = (e: string) => e.toLowerCase().replace(/ø/g, 'o').replace(/æ/g, 'ae').replace(/ß/g, 'ss').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -9,6 +10,7 @@ const plain = (e: string) => e.toLowerCase().replace(/ø/g, 'o').replace(/æ/g, 
 export type SignInState = { ok?: boolean; err?: string; email?: string } | null;
 
 export async function signIn(_prev: SignInState, form: FormData): Promise<SignInState> {
+  if (isPostgres()) return { err: 'Please use “Sign in with Microsoft”.' };
   const email = String(form.get('email') || '').trim(), password = String(form.get('password') || '');
   if (!email || !password) return { err: 'Please enter your e-mail and password.', email };
   const login = plain(email);
@@ -28,6 +30,7 @@ export async function signIn(_prev: SignInState, form: FormData): Promise<SignIn
 }
 
 export async function setPassword(_prev: SignInState, form: FormData): Promise<SignInState> {
+  if (isPostgres()) return { err: 'Passwords are not used: sign in with Microsoft.' };
   const a = String(form.get('password') || ''), b = String(form.get('again') || '');
   if (a.length < 8) return { err: 'At least 8 characters, please.' };
   if (a !== b) return { err: 'The two passwords are not the same.' };

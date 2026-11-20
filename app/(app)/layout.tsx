@@ -1,6 +1,7 @@
 // Every signed-in page: loads everything once (bootstrap), refreshed after each change (router.refresh()).
 import { redirect } from 'next/navigation';
 import { rpcClient, statusOf, DbError } from '@/lib/rpc';
+import { isPostgres } from '@/lib/backend';
 import type { Data } from '@/lib/model';
 import AppProvider from '@/components/AppProvider';
 import Shell from '@/components/Shell';
@@ -20,8 +21,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     missing = e instanceof DbError && ['PGRST202', '42883', 'PGRST205', '42P01'].includes(e.code);
     if (!missing && status === 500) throw e;
   }
-  if (status === 401) redirect('/login');
-  if (missing) return <Notice title="Not set up yet" text="The database has no Circuit tables yet. Run the files in supabase/migrations (see the README)." />;
+  if (status === 401) redirect(isPostgres() ? '/auth/signout' : '/login');
+  if (missing) return <Notice title="Not set up yet" text="The database has no Circuit tables yet. Run the migrations: npm run db:migrate (see docs/HANDOVER.md)." />;
   if (status === 403 || !data) return <Notice title="No access" text="Your account is deactivated. Ask an admin (People) to switch it back on." />;
-  return <AppProvider data={data}><Shell>{children}</Shell></AppProvider>;
+  return <AppProvider data={data} microsoft={isPostgres()}><Shell>{children}</Shell></AppProvider>;
 }

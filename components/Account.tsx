@@ -1,11 +1,11 @@
 'use client';
-// Your account: who you are in Circuit, and your own password.
+// Your account: who you are in Circuit, your own password (or Microsoft sign-in), and your devices.
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { useApp } from './AppProvider';
 import { changePassword, signOutOthers, type PwState } from '@/app/(app)/account/actions';
 import { ROLE_LABEL } from '@/lib/model';
 
-export default function Account() {
+export default function Account({ microsoft = false }: { microsoft?: boolean }) {
   const { me, toast } = useApp();
   const [st, run, pending] = useActionState<PwState, FormData>(changePassword, null);
   const form = useRef<HTMLFormElement>(null);
@@ -18,7 +18,7 @@ export default function Account() {
   useEffect(() => { if (st?.ok) { toast('Password changed. Use the new one next time you sign in.'); form.current?.reset(); } }, [st, toast]);
   return (
     <main className="page" style={{ maxWidth: 720 }}>
-      <section className="head"><div><h1 className="title">Your account</h1><p className="lede">You stay signed in on this device. Your password is only needed on a new device or browser.</p></div></section>
+      <section className="head"><div><h1 className="title">Your account</h1><p className="lede">{microsoft ? 'You sign in with your Bitcoin Suisse Microsoft account.' : 'You stay signed in on this device. Your password is only needed on a new device or browser.'}</p></div></section>
       <div className="card acct">
         <dl>
           <div><dt>Name</dt><dd>{me.name}</dd></div>
@@ -26,7 +26,7 @@ export default function Account() {
           <div><dt>Role</dt><dd>{ROLE_LABEL[me.role]}{me.team ? ` · ${me.team}` : ''}{me.market ? ` · ${me.market}` : ''}</dd></div>
         </dl>
       </div>
-      <div className="card acct">
+      {!microsoft && <div className="card acct">
         <h2 className="h2">Change password</h2>
         <p className="muted small" style={{ margin: '4px 0 16px' }}>At least 8 characters. A short sentence is easy to remember and hard to guess.</p>
         <form ref={form} action={run} className="acct-f">
@@ -40,7 +40,7 @@ export default function Account() {
           {st?.ok && <p className="ok-t" role="status">Done. Your new password is active. Other devices need to sign in again.</p>}
           <div><button className="btn red" disabled={pending}>{pending ? 'Saving…' : 'Change password'}</button></div>
         </form>
-      </div>
+      </div>}
       <div className="card acct">
         <h2 className="h2">Devices</h2>
         <p className="muted small" style={{ margin: '4px 0 16px' }}>Lost a phone or signed in on a shared computer? Sign out everywhere else. This browser stays signed in.</p>

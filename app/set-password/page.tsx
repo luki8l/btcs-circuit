@@ -2,10 +2,11 @@ import { redirect } from 'next/navigation';
 import { PasswordForm } from '../login/form';
 import { fromFreshLink } from '@/lib/supabase';
 import { LOCAL } from '@/lib/rpc';
+import { isPostgres } from '@/lib/backend';
 
 // only reachable right after a sign-in link; signed in the normal way, the password is changed under Account
 export default async function SetPassword() {
-  if (!LOCAL && !(await fromFreshLink())) redirect('/account');
+  if (isPostgres() || (!LOCAL && !(await fromFreshLink()))) redirect('/account');
   return (
     <main className="login">
       <section className="login-l">

@@ -13,7 +13,7 @@ const ROLES: Role[] = ['sales', 'events', 'management', 'admin'];
 const MARKETS = ['Austria', 'Germany', 'Liechtenstein', 'Netherlands', 'Portugal', 'Sweden', 'Switzerland', 'Spain', 'France', 'Italy', 'United Kingdom', 'Denmark', 'Norway', 'Finland'];
 const VERB: Record<string, string> = { request: 'requested', request_edit: 'changed the request for', withdraw: 'withdrew from', approved: 'approved a request for', declined: 'declined a request for', reopen: 'reopened a request for', assign: 'sent someone to', hubspot: 'logged in HubSpot', hubspot_undo: 'undid HubSpot for', debrief: 'debriefed', flag: 'flagged', unflag: 'removed the flag on', suggest: 'suggested', suggestion_added: 'added a suggestion:', suggestion_dismissed: 'sent back a suggestion:', suggestion_resent: 'resent a suggestion:', suggestion_edit: 'changed a suggestion:', event_create: 'added the event', event_edit: 'edited', event_archive: 'archived', event_restore: 'restored', person_save: 'changed an account', hubspot_created: 'created in HubSpot:', hubspot_linked: 'linked to HubSpot:', hubspot_updated: 'updated in HubSpot:', hubspot_unlinked: 'unlinked from HubSpot:' };
 
-export default function People({ people, feed, secretKey }: { people: AdminPerson[]; feed: Act[]; secretKey: boolean }) {
+export default function People({ people, feed, secretKey, microsoft = false }: { people: AdminPerson[]; feed: Act[]; secretKey: boolean; microsoft?: boolean }) {
   const { me, ev, people: pm, toast } = useApp();
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -42,7 +42,7 @@ export default function People({ people, feed, secretKey }: { people: AdminPerso
   return (
     <main className="page">
       <section className="head">
-        <div><p className="k">Admin</p><h1 className="title">People &amp; <em>access</em>.</h1><p className="lede">Every colleague gets their own account. Add them here, send them their sign-in link (Teams or e-mail), and they choose a password.</p></div>
+        <div><p className="k">Admin</p><h1 className="title">People &amp; <em>access</em>.</h1><p className="lede">{microsoft ? 'Every colleague gets their own account. Add them here with their Bitcoin Suisse e-mail; they sign in with Microsoft.' : 'Every colleague gets their own account. Add them here, send them their sign-in link (Teams or e-mail), and they choose a password.'}</p></div>
         <div className="stats">
           {ROLES.map(r => <div key={r} className="stat"><b className="num">{people.filter(p => p.role === r && p.active).length}</b><span>{ROLE_LABEL[r]}</span></div>)}
         </div>
@@ -67,6 +67,7 @@ export default function People({ people, feed, secretKey }: { people: AdminPerso
             <button className="btn red" disabled={pending || !secretKey}><IcPlus />{pending ? 'Creating…' : 'Create account'}</button>
             {res?.err && <span className="err">{res.err}</span>}
           </div>
+          {res?.microsoft && res.ok && <div className="banner" style={{ borderColor: 'var(--line-2)', background: 'var(--ok-soft)' }}><span><IcCheck s={14} /> <b>Account ready for {res.email}.</b> They open Circuit and sign in with Microsoft. Nothing to send.</span></div>}
           {res?.link && (
             <div className="banner" style={{ borderColor: 'var(--line-2)', background: 'var(--ok-soft)', flexDirection: 'column', gap: 10 }}>
               <span><IcCheck s={14} /> <b>Account ready for {res.email}.</b> Send this sign-in link. It works once, for 24 hours, and lets them choose a password.</span>
@@ -103,7 +104,7 @@ export default function People({ people, feed, secretKey }: { people: AdminPerso
                 <td className="dim nowrap">{p.lastSignIn ? new Date(p.lastSignIn).toLocaleDateString('de-CH') : 'never'}</td>
                 <td>{p.active ? <span className="pill ok"><i />Active</span> : <span className="pill off">Deactivated</span>}</td>
                 <td className="r nowrap">
-                  <button className="btn ghost sm" disabled={pending || !secretKey} onClick={() => start(async () => { const r = await newLink(p.email, p.id); setRes(r); if (r.link) { copy(r.link); window.scrollTo({ top: 0, behavior: 'smooth' }); } else if (r.err) toast(r.err, true); })}><IcLink s={13} />Sign-in link</button>
+                  {!microsoft && <button className="btn ghost sm" disabled={pending || !secretKey} onClick={() => start(async () => { const r = await newLink(p.email, p.id); setRes(r); if (r.link) { copy(r.link); window.scrollTo({ top: 0, behavior: 'smooth' }); } else if (r.err) toast(r.err, true); })}><IcLink s={13} />Sign-in link</button>}
                   <button className="btn line sm" onClick={() => { setEdit(p.id); setDraft(p); }}>Edit</button>
                 </td>
               </tr>

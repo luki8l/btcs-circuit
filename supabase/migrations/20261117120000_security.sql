@@ -6,9 +6,16 @@ revoke select on public.profiles, public.events, public.requests, public.flags, 
 
 -- 2. Nothing new in the public schema is open by default: Supabase grants new tables and functions to anon and
 --    authenticated automatically. Future migrations grant exactly what they need, like the ones before.
-alter default privileges for role postgres in schema public revoke all on tables from anon, authenticated;
-alter default privileges for role postgres in schema public revoke all on sequences from anon, authenticated;
-alter default privileges for role postgres in schema public revoke execute on functions from public, anon, authenticated;
+--    (for the role that runs the migrations: postgres on Supabase, the server admin on plain Postgres / Azure)
+do $$ declare r text; begin
+  foreach r in array array['postgres', current_user] loop
+    if exists (select 1 from pg_roles where rolname = r) and pg_has_role(current_user, r, 'MEMBER') then
+      execute format('alter default privileges for role %I in schema public revoke all on tables from anon, authenticated', r);
+      execute format('alter default privileges for role %I in schema public revoke all on sequences from anon, authenticated', r);
+      execute format('alter default privileges for role %I in schema public revoke execute on functions from public, anon, authenticated', r);
+    end if;
+  end loop;
+end $$;
 
 -- 3. Links are web links only (no javascript:, data: …), checked again here after the app.
 alter table public.events drop constraint if exists events_website_http;

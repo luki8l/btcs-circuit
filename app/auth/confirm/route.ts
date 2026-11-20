@@ -3,8 +3,10 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabaseServer } from '@/lib/supabase';
 import { LOCAL } from '@/lib/rpc';
+import { isPostgres } from '@/lib/backend';
 
 export async function GET(req: Request) {
+  if (isPostgres()) return NextResponse.redirect(new URL('/login', req.url));   // Microsoft sign-in: no links
   const u = new URL(req.url), token_hash = u.searchParams.get('token_hash') || '', type = u.searchParams.get('type');
   if (LOCAL) {
     const uid = u.searchParams.get('local') || '';

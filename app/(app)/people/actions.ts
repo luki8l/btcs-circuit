@@ -5,8 +5,9 @@ import { headers } from 'next/headers';
 import { z } from 'zod';
 import { rpcClient, messageOf, LOCAL } from '@/lib/rpc';
 import { supabaseAdmin } from '@/lib/admin';
+import { isPostgres, siteUrl } from '@/lib/backend';
 
-export type Res = { ok?: boolean; err?: string; link?: string; email?: string };
+export type Res = { ok?: boolean; err?: string; link?: string; email?: string; microsoft?: boolean };
 const Role = z.enum(['admin', 'events', 'management', 'sales']);
 const NewPerson = z.object({ name: z.string().trim().min(2).max(80), email: z.string().trim().toLowerCase().email().max(200), role: Role, market: z.string().trim().max(60), team: z.string().trim().max(60), title: z.string().trim().max(80) });
 
@@ -15,7 +16,7 @@ async function requireAdmin() {
   if (me.role !== 'admin') throw new Error('Only admins manage accounts.');
 }
 async function origin() {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '');
+  if (siteUrl()) return siteUrl();
   const h = await headers();
   const host = h.get('x-forwarded-host') || h.get('host') || 'localhost:3000';
   return `${h.get('x-forwarded-proto') || (host.startsWith('localhost') || host.startsWith('127.') ? 'http' : 'https')}://${host}`;
@@ -32,6 +33,10 @@ export async function createPerson(input: unknown): Promise<Res> {
     await requireAdmin();
     const p = NewPerson.parse(input);
     const meta = { name: p.name, market: p.market, team: p.team, title: p.title };
+    if (isPostgres()) {   // Microsoft sign-in: the account is enough, no password and no link
+      await (await rpcClient())('person_create', { p_email: p.email, p_name: p.name, p_role: p.role, p_market: p.market, p_team: p.team, p_title: p.title });
+      return { ok: true, email: p.email, microsoft: true };
+    }
     let uid: string;
     if (LOCAL) { uid = await (await import('@/lib/localdb')).localCreateUser(p.email, meta, p.role); }
     else {
@@ -49,6 +54,7 @@ export async function createPerson(input: unknown): Promise<Res> {
 }
 
 export async function newLink(email: string, uid: string): Promise<Res> {
+  if (isPostgres()) return { err: 'Not needed: people sign in with Microsoft.' };
   try { await requireAdmin(); return { ok: true, email, link: await linkFor(z.string().email().parse(email), uid) }; }
   catch (e) { return { err: e instanceof Error ? messageOf(e) : 'Something went wrong.' }; }
 }
@@ -60,7 +66,7 @@ export async function savePerson(input: { id: string; name: string; role: string
     await requireAdmin();
     const p = SavePerson.parse(input);
     await (await rpcClient())('person_save', { p_id: p.id, p_name: p.name, p_role: p.role, p_market: p.market, p_team: p.team, p_title: p.title, p_active: p.active });
-    if (!LOCAL) {
+    if (!LOCAL && !isPostgres()) {
       // the role also in app metadata; deactivated = the login is blocked too, which ends their sessions on every device
       const { error } = await supabaseAdmin().auth.admin.updateUserById(p.id, { app_metadata: { role: p.role }, ban_duration: p.active ? 'none' : '876000h' });
       if (error) return { err: 'Saved, but the login could not be updated: ' + error.message };

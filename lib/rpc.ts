@@ -1,6 +1,10 @@
 // The one way the app talks to the database: the functions in supabase/migrations, called as the signed-in user.
-// Production: Supabase (PostgREST). Local development (CIRCUIT_LOCAL_DB=1): the same SQL in an in-process Postgres (PGlite).
+// supabase mode: Supabase (PostgREST). postgres mode: any PostgreSQL directly (lib/pgdb.ts).
+// Local development (CIRCUIT_LOCAL_DB=1): the same SQL in an in-process Postgres (PGlite).
+import { cookies } from 'next/headers';
 import { supabaseServer } from './supabase';
+import { isPostgres } from './backend';
+import { readSession, SESSION_COOKIE } from './session';
 
 export const LOCAL = process.env.NODE_ENV === 'development' && process.env.CIRCUIT_LOCAL_DB === '1';
 
@@ -11,6 +15,10 @@ export type Rpc = <T = unknown>(fn: string, args?: Record<string, unknown>) => P
 
 export async function rpcClient(): Promise<Rpc> {
   if (process.env.NODE_ENV === 'development' && process.env.CIRCUIT_LOCAL_DB === '1') return (await import('./localdb')).localRpc();
+  if (isPostgres()) {
+    const claims = await readSession((await cookies()).get(SESSION_COOKIE)?.value);
+    return (await import('./pgdb')).pgRpc(claims);
+  }
   const sb = await supabaseServer();
   return async <T,>(fn: string, args: Record<string, unknown> = {}) => {
     const { data, error } = await sb.rpc(fn, args);

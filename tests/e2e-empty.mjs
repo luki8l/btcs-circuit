@@ -1,4 +1,5 @@
-// The first-day experience: no requests yet (local app WITHOUT CIRCUIT_LOCAL_DEMO). node tests/e2e-empty.mjs
+// The first-day experience: no requests yet. Local app WITHOUT CIRCUIT_LOCAL_DEMO, with
+//   CIRCUIT_LOCAL_ROLES=ceo.demo@example.com:management,roman@example.com:events   then: node tests/e2e-empty.mjs
 import { createRequire } from 'node:module';
 const { chromium } = createRequire(import.meta.url)('playwright');
 const BASE = process.argv[2] || 'http://127.0.0.1:3100', OUT = '.e2e-shots/empty-';
