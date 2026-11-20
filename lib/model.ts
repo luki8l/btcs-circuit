@@ -22,7 +22,12 @@ export type Req = {
   rating: number | null; goAgain: 'yes' | 'maybe' | 'no' | null; debriefNote: string; debriefedAt: string | null; createdBy: string | null; createdAt: string; updatedAt: string;
 };
 export type Flag = { eventId: number; note: string; by: string | null; at: string };
-export type Suggestion = { id: string; name: string; month: string | null; city: string; website: string; reason: string; source: 'app' | 'masterlist'; by: string | null; status: 'pending' | 'added' | 'dismissed'; eventId: number | null; createdAt: string };
+/** what a sales person may add to a suggestion (all optional); same keys as the event editor */
+export type SugDetails = { mode?: 'exact' | 'month' | 'tbd'; start?: string; end?: string; startTime?: string; endTime?: string; country?: string; region?: string;
+  kind?: string; size?: string; costTicket?: string; costSponsor?: string; audience?: string; focus?: string; notes?: string };
+export type Suggestion = { id: string; name: string; month: string | null; city: string; website: string; reason: string; source: 'app' | 'masterlist'; by: string | null;
+  status: 'pending' | 'added' | 'dismissed'; eventId: number | null; createdAt: string;
+  details?: SugDetails; decisionNote?: string; decidedBy?: string | null; decidedAt?: string | null; updatedAt?: string };
 export type Data = { me: Person & { email: string }; today: string; people: Person[]; events: RawEvent[]; requests: Req[]; flags: Flag[]; suggestions: Suggestion[] };
 
 export type Ev = RawEvent & {
@@ -99,6 +104,14 @@ const AREA_WORDS: [string[], string][] = [
   [AREAS['the Nordics'], 'nordics nordic scandinavia'], [AREAS.Benelux, 'benelux'], [AREAS['the Middle East'], 'middle east gcc'],
   [['Czechia', 'Poland', 'Hungary', 'Slovakia', 'Slovenia', 'Croatia', 'Romania', 'Bulgaria', 'Serbia'], 'eastern europe cee'],
 ];
+/** catalogue region for a country (code or name): CH, ME, US (Americas), APAC, AF, BM or EU; '' if unknown */
+const REGION_BY_COUNTRY: Record<string, string> = {
+  Switzerland: 'CH', 'United Arab Emirates': 'ME', 'Saudi Arabia': 'ME', Qatar: 'ME', Bahrain: 'ME', Kuwait: 'ME', Oman: 'ME', Israel: 'ME',
+  'United States': 'US', Canada: 'US', Mexico: 'US', Argentina: 'US', Brazil: 'US', Chile: 'US', Colombia: 'US', Bermuda: 'BM',
+  'Hong Kong': 'APAC', Singapore: 'APAC', Japan: 'APAC', 'South Korea': 'APAC', India: 'APAC', Thailand: 'APAC', 'New Zealand': 'APAC', Australia: 'APAC',
+  China: 'APAC', Taiwan: 'APAC', Indonesia: 'APAC', Vietnam: 'APAC', Philippines: 'APAC', Malaysia: 'APAC', 'South Africa': 'AF', Nigeria: 'AF', Kenya: 'AF',
+};
+export const regionOf = (country: string) => { const n = countryName(country); return !n ? '' : REGION_BY_COUNTRY[n] || 'EU'; };
 export const areaOf = (country: string) => Object.keys(AREAS).find(a => AREAS[a].includes(country)) || '';
 // extra words people type: local names, short forms
 const ALIAS: Record<string, string> = {
@@ -215,3 +228,18 @@ export function queryToFilters(q: URLSearchParams): Filters {
     fitGroup: Number.isInteger(g) && g >= 0 && g <= 4 ? g : -1, fitMin: Number.isInteger(m) && m >= 1 && m <= 5 ? m : 0,
   };
 }
+
+// ───────────────────────────── suggestions ─────────────────────────────
+/** "12–13 May 2027 · 09:00–18:00", "May 2027" or "No date yet" */
+export function sugWhen(sg: Suggestion) {
+  const d = sg.details || {};
+  if (d.mode === 'exact' && d.start) {
+    const a = pd(d.start), b = pd(d.end || d.start);
+    const day = +a === +b ? `${a.getDate()} ${MS[a.getMonth()]} ${a.getFullYear()}`
+      : a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear() ? `${a.getDate()}–${b.getDate()} ${MS[a.getMonth()]} ${a.getFullYear()}`
+      : `${a.getDate()} ${MS[a.getMonth()]} – ${b.getDate()} ${MS[b.getMonth()]} ${b.getFullYear()}`;
+    return day + (d.startTime || d.endTime ? ` · ${d.startTime || '…'}–${d.endTime || '…'}` : '');
+  }
+  return sg.month ? monthText(sg.month) : 'No date yet';
+}
+export const sugPlace = (sg: Suggestion) => { const c = countryName(sg.details?.country); return [sg.city, c && fold(c) !== fold(sg.city) ? c : ''].filter(Boolean).join(', '); };

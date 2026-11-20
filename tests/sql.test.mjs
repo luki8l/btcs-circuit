@@ -107,6 +107,40 @@ const added = await call(ROM, 'suggestion_decide', { p_id: s.id, p_add: true });
 const ev = (await call(ANA, 'bootstrap')).events.find(e => e.id === added.eventId);
 ok(ev && ev.mode === 'month' && ev.start === '2027-03-01' && ev.tier === null && ev.source === 'suggestion', 'suggestion becomes an unrated event');
 
+console.log('detailed suggestions + feedback');
+{
+  const d = { mode: 'exact', start: '2027-05-12', end: '2027-05-13', startTime: '09:00', endTime: '18:00', country: 'PT', region: 'EU', kind: 'Crypto', size: 'M', costTicket: 'EUR 900', audience: 'Founders, funds', notes: 'Speaker slot possible', junk: 'dropped' };
+  const s1 = await call(ANA, 'suggestion_create', { p_name: 'Lisbon Digital Assets Summit', p_month: '', p_city: 'Lisbon', p_website: 'https://example.com/ldas', p_reason: 'Our Portugal clients go', p_details: d });
+  let mine = (await call(ANA, 'bootstrap')).suggestions.find(x => x.id === s1.id);
+  ok(mine.month === '2027-05' && mine.details.startTime === '09:00' && mine.details.country === 'PT' && !('junk' in mine.details), 'details stored (month from the dates, unknown keys dropped)');
+  ok(await err(call(ANA, 'suggestion_create', { p_name: 'X', p_month: '', p_city: '', p_website: '', p_reason: '', p_details: { mode: 'exact', start: '2027-05-12', end: '2027-05-10' } })) === '22023', 'end before start refused');
+  ok(await err(call(ANA, 'suggestion_create', { p_name: 'X', p_month: '', p_city: '', p_website: '', p_reason: '', p_details: { startTime: '9am' } })) === '22023', 'bad time refused');
+  ok(await err(call(ANA, 'suggestion_create', { p_name: 'X', p_month: '', p_city: '', p_website: '', p_reason: '', p_details: { start: '2027-02-30' } })) !== null, 'impossible date refused');
+  // Roman: not added, with a reason; sales see it, improve and resend
+  ok(await err(call(ANA, 'suggestion_decide', { p_id: s1.id, p_add: false, p_note: 'no' })) === '42501', 'sales cannot decide');
+  await call(ROM, 'suggestion_decide', { p_id: s1.id, p_add: false, p_note: 'Too vague: is it the main conference or a side event?' });
+  mine = (await call(ANA, 'bootstrap')).suggestions.find(x => x.id === s1.id);
+  ok(mine.status === 'dismissed' && /side event/.test(mine.decisionNote) && !!mine.decidedAt, 'sales see "not added" and why');
+  ok(await err(call(BEN, 'suggestion_update', { p_id: s1.id, p_name: 'Hijack', p_month: '', p_city: '', p_website: '', p_reason: '' })) === 'P0002', 'others cannot change someone else\'s suggestion');
+  await call(ANA, 'suggestion_update', { p_id: s1.id, p_name: 'Lisbon Digital Assets Summit (main conference)', p_month: '', p_city: 'Lisbon', p_website: 'https://example.com/ldas', p_reason: 'Main conference, 2 days', p_details: d });
+  mine = (await call(ANA, 'bootstrap')).suggestions.find(x => x.id === s1.id);
+  ok(mine.status === 'pending' && /main conference/.test(mine.name) && /side event/.test(mine.decisionNote), 'resent: waiting again, Roman still sees his last note');
+  // Roman adds it: the event has everything the sales person gave
+  const r = await call(ROM, 'suggestion_decide', { p_id: s1.id, p_add: true });
+  const e = (await call(ROM, 'bootstrap')).events.find(x => x.id === r.eventId);
+  ok(e && e.mode === 'exact' && e.start === '2027-05-12' && e.end === '2027-05-13' && e.startTime === '09:00' && e.endTime === '18:00', 'added with exact dates and times');
+  ok(e.country === 'PT' && e.city === 'Lisbon' && e.region === 'EU' && e.kind === 'Crypto' && e.size === 'M' && e.costTicket === 'EUR 900' && e.audience === 'Founders, funds', 'added with place, type, size, ticket, audience');
+  ok(e.website === 'https://example.com/ldas' && /Main conference/.test(e.notes) && /Speaker slot/.test(e.notes) && e.source === 'suggestion' && e.tier === null, 'website, why + notes, source "suggestion", tier left for Roman');
+  ok(await err(call(ANA, 'suggestion_update', { p_id: s1.id, p_name: 'x', p_month: '', p_city: '', p_website: '', p_reason: '' })) === '22023', 'an added suggestion cannot be changed');
+  const logs = (await db.query(`select action from public.activity where action in ('suggestion_dismissed', 'suggestion_resent', 'suggestion_added') and details->>'name' like 'Lisbon Digital%' order by id`)).rows.map(x => x.action).join(',');
+  ok(logs === 'suggestion_dismissed,suggestion_resent,suggestion_added', 'all steps in the activity log');
+  // month only, no details
+  const s2 = await call(ANA, 'suggestion_create', { p_name: 'Month only', p_month: '2027-09', p_city: '', p_website: '', p_reason: '' });
+  const r2 = await call(ROM, 'suggestion_decide', { p_id: s2.id, p_add: true });
+  const e2m = (await call(ROM, 'bootstrap')).events.find(x => x.id === r2.eventId);
+  ok(e2m.mode === 'month' && e2m.start === '2027-09-01', 'month-only suggestion still works');
+}
+
 console.log('catalogue editing');
 ok(await err(call(ANA, 'event_save', { p_id: null, p_data: { name: 'X' } })) === '42501', 'sales cannot add events');
 let e2 = await call(ROM, 'event_save', { p_id: null, p_data: { name: 'Crypto Night Vaduz', mode: 'exact', start: '2027-02-10', end: '2027-02-10', city: 'Vaduz', country: 'LI', region: 'EU', tier: 2, fit: [5, 3, 4, null, 2] } });

@@ -12,9 +12,9 @@ Get IT and Compliance to sign off the hosting (Supabase eu-north-1 Stockholm / V
 | --- | --- | --- |
 | Events | everyone | List (default), month calendar, year view; filter dropdowns with counts, quick views, full screen, ⌘K jump, “Request a spot” on every row |
 | Event drawer | everyone | Who goes, policy for the tier, buy-side fit, team rating, masterlist notes; request / change / debrief |
-| My events | everyone | Own requests, HubSpot step, 60-second debrief, own suggestions |
+| My events | everyone | Own requests, HubSpot step, 60-second debrief, own suggestions (with Roman's answer; improve and resend) |
 | Team | everyone | People × months: who goes where (approved solid, waiting dashed) |
-| Requests | events, admin (management read-only) | Inbox with bulk approve/decline, decided (reopen), coverage gaps (flag, send someone), suggestions |
+| Requests | events, admin (management read-only) | Inbox with bulk approve/decline, decided (reopen), coverage gaps (flag, send someone), suggestions (all details from sales; add, or send back with a reason) |
 | Catalogue | events, admin | Every event: add, edit, archive |
 | Overview | events, management, admin | Season ahead, key events without anyone, events per month, coverage by region, results per event |
 | People | admin | Create accounts (sign-in link to copy), roles, market, team, deactivate; activity log |

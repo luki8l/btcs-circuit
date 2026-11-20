@@ -5,7 +5,7 @@ import { useApp } from './AppProvider';
 import { Tier, DateBlock, Av, Confirm, Blank } from './ui';
 import ReportMenu from './ReportMenu';
 import { IcCheck, IcX, IcFlag, IcUsers, IcWarn, IcInfo } from './icons';
-import { GS, MODES, ML, POLICY, chf, dateLabel, place, bestFit, isStaff, monthText, type Ev } from '@/lib/model';
+import { GS, MODES, ML, POLICY, chf, dateLabel, place, bestFit, isStaff, monthText, sugWhen, sugPlace, type Ev, type Suggestion } from '@/lib/model';
 
 type Tab = 'inbox' | 'decided' | 'coverage' | 'suggestions';
 
@@ -189,19 +189,52 @@ export default function Approvals() {
       </>}
 
       {tab === 'suggestions' && (!sugs.length ? <div className="card"><Blank title="No suggestions" text="When someone misses an event in the list, they suggest it and it shows up here to add." /></div> : (
-        <div className="card">{sugs.map(s => (
-          <div key={s.id} className="mine" style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}>
-            <div style={{ minWidth: 0 }}><b style={{ fontSize: 15 }}>{s.name}</b>
-              <div className="sub">{[monthText(s.month), s.city].filter(Boolean).join(' · ') || 'No date yet'} · {s.source === 'masterlist' ? 'comment in the masterlist' : `from ${people.get(s.by || '')?.name || 'a colleague'}`}</div>
-              {s.reason && <p className="why" style={{ marginTop: 10, fontSize: 13.5 }}>{s.reason}</p>}
-              {s.website && (/^https?:\/\//i.test(s.website) ? <a className="dim small" href={s.website} target="_blank" rel="noopener noreferrer">{s.website}</a> : <span className="dim small">{s.website}</span>)}</div>
-            {!ro && <div className="side" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-              <button className="btn ok sm" disabled={busy} onClick={async () => { const r = await act<{ eventId: number }>('suggestion_decide', { p_id: s.id, p_add: true }, 'Added. Now fill in country, tier and fit.'); if (r.ok && r.data?.eventId) setFresh(r.data.eventId); }}>Add to calendar</button>
-              <Confirm label="Dismiss" sure="Yes, dismiss" className="btn line sm" disabled={busy} onYes={() => act('suggestion_decide', { p_id: s.id, p_add: false }, 'Dismissed')} />
-            </div>}
-          </div>
-        ))}</div>
+        <div className="card">{sugs.map(s => <SuggestionCard key={s.id} s={s} ro={ro} onAdded={setFresh} />)}</div>
       ))}
     </main>
+  );
+}
+
+// quick reasons Roman can send back with one click (then edit the text if he likes)
+const REASONS = ['Too vague: please add exact dates, city and website.', 'Already in the calendar.', 'Not a fit for Bitcoin Suisse right now.'];
+
+function SuggestionCard({ s, ro, onAdded }: { s: Suggestion; ro: boolean; onAdded: (id: number) => void }) {
+  const { people, act, busy } = useApp();
+  const [no, setNo] = useState(false);
+  const [note, setNote] = useState('');
+  const d = s.details || {}, who = people.get(s.by || '')?.name || 'a colleague', first = who.split(' ')[0];
+  const resent = !!s.decisionNote && !!s.decidedAt && !!s.updatedAt && s.updatedAt > s.decidedAt;
+  const facts = [['Type', d.kind], ['Audience size', d.size], ['Ticket', d.costTicket], ['Sponsoring', d.costSponsor], ['Who goes', d.audience]].filter(([, v]) => v) as [string, string][];
+  const where = sugPlace(s);
+  async function add() {
+    const r = await act<{ eventId: number }>('suggestion_decide', { p_id: s.id, p_add: true }, 'Added. Check it and set the tier.');
+    if (r.ok && r.data?.eventId) onAdded(r.data.eventId);
+  }
+  async function decline() {
+    const r = await act('suggestion_decide', { p_id: s.id, p_add: false, p_note: note.trim() }, `Sent back to ${first}`);
+    if (r.ok) setNo(false);
+  }
+  return (
+    <div className="mine sug" style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}>
+      <div style={{ minWidth: 0 }}>
+        <b style={{ fontSize: 15 }}>{s.name}</b>
+        <div className="sub">{[sugWhen(s), where || 'No place yet'].join(' · ')} · {s.source === 'masterlist' ? 'comment in the masterlist' : `from ${who}`}</div>
+        {resent && <p className="dim small" style={{ marginTop: 8 }}>You sent it back (“{s.decisionNote}”). {first} updated it.</p>}
+        {facts.length > 0 && <dl className="sug-facts">{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>}
+        {s.reason && <p className="why" style={{ marginTop: 10, fontSize: 13.5 }}>{s.reason}</p>}
+        {d.notes && <p className="note small" style={{ marginTop: 8 }}>{d.notes}</p>}
+        {s.website && (/^https?:\/\//i.test(s.website) ? <a className="dim small" href={s.website} target="_blank" rel="noopener noreferrer">{s.website}</a> : <span className="dim small">{s.website}</span>)}
+        {no && <div className="sug-no">
+          <p className="lab">Why not? {first} sees this</p>
+          <div className="chips">{REASONS.map(r => <button type="button" key={r} className="chip" aria-pressed={note === r} onClick={() => setNote(r)}>{r.split(':')[0].replace(/\.$/, '')}</button>)}</div>
+          <textarea className="area" value={note} onChange={x => setNote(x.target.value)} maxLength={1000} placeholder={`A short note to ${first} (optional)`} aria-label={`Note to ${first}`} />
+          <div style={{ display: 'flex', gap: 8 }}><button className="btn red sm" disabled={busy} onClick={decline}>Send back to {first}</button><button className="btn ghost sm" onClick={() => { setNo(false); setNote(''); }}>Cancel</button></div>
+        </div>}
+      </div>
+      {!ro && !no && <div className="side" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+        <button className="btn ok sm" disabled={busy} onClick={add}>Add to calendar</button>
+        <button className="btn line sm" disabled={busy} onClick={() => setNo(true)}>Not now…</button>
+      </div>}
+    </div>
   );
 }

@@ -7,7 +7,7 @@ import { pd, prep, type Data, type Ev, type Person, type Req, type PresenceInfo 
 
 export type DrawerState =
   | { kind: 'event'; id: number; view: 'detail' | 'request' | 'edit-request' | 'sent' | 'debrief' | 'assign'; rid?: string }
-  | { kind: 'suggest' }
+  | { kind: 'suggest'; id?: string }
   | { kind: 'edit'; id: number | null }
   | null;
 

@@ -25,6 +25,18 @@ const eventData = z.object({
   startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional().nullable().or(z.literal('')), endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional().nullable().or(z.literal('')),
 });
 
+const day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).or(z.literal(''));
+const hhmm = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).or(z.literal(''));
+// what a sales person may tell about a suggested event, all optional (checked again in the database)
+const suggestion = z.object({
+  p_name: z.string().trim().min(1).max(200), p_month: z.string().regex(/^(\d{4}-(0[1-9]|1[0-2]))?$/), p_city: text(120), p_website: link, p_reason: text(2000),
+  p_details: z.object({
+    mode: z.enum(['exact', 'month', 'tbd']).optional(), start: day.optional(), end: day.optional(), startTime: hhmm.optional(), endTime: hhmm.optional(),
+    country: text(40).optional(), region: text(20).optional(), kind: text(120).optional(), size: text(12).optional(), costTicket: text(300).optional(),
+    costSponsor: text(400).optional(), audience: text(300).optional(), focus: text(300).optional(), notes: text(2000).optional(),
+  }).strict().optional(),
+});
+
 const FNS: Record<string, z.ZodTypeAny> = {
   request_create: z.object({ p_event: id, ...reqFields }),
   request_edit: z.object({ p_id: uuid, ...reqFields }),
@@ -35,8 +47,9 @@ const FNS: Record<string, z.ZodTypeAny> = {
   request_hubspot: z.object({ p_id: uuid, p_done: z.boolean() }),
   request_debrief: z.object({ p_id: uuid, p_leads: z.number().int().min(0).max(100000), p_held: z.number().int().min(0).max(10000), p_rating: z.number().int().min(1).max(5), p_again: z.enum(['yes', 'maybe', 'no']), p_note: text(2000) }),
   flag_set: z.object({ p_event: id, p_on: z.boolean(), p_note: text(300) }),
-  suggestion_create: z.object({ p_name: z.string().trim().min(1).max(200), p_month: z.string().regex(/^(\d{4}-(0[1-9]|1[0-2]))?$/), p_city: text(120), p_website: link, p_reason: text(2000) }),
-  suggestion_decide: z.object({ p_id: uuid, p_add: z.boolean() }),
+  suggestion_create: suggestion,
+  suggestion_update: suggestion.extend({ p_id: uuid }),
+  suggestion_decide: z.object({ p_id: uuid, p_add: z.boolean(), p_note: text(1000).optional() }),
   event_save: z.object({ p_id: id.nullable(), p_data: eventData }),
   event_archive: z.object({ p_id: id, p_archived: z.boolean() }),
   activity_feed: z.object({ p_limit: z.number().int().min(1).max(500) }),

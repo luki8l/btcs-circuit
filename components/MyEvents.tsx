@@ -4,10 +4,11 @@ import { useApp } from './AppProvider';
 import Link from 'next/link';
 import { Tier, DateBlock, StatusPill, Confirm, Blank } from './ui';
 import { IcCheck, IcPlus, IcCal } from './icons';
-import { GS, MODES, TICKETS, chf, dateLabel, place, monthText, type Req } from '@/lib/model';
+import { GS, MODES, TICKETS, chf, dateLabel, place, monthText, sugWhen, sugPlace, type Req } from '@/lib/model';
 
 export default function MyEvents() {
   const { me, data, ev, open, act, busy, group, setGroup, people, today, seen, markSeen, isNew } = useApp();
+  const mySugs = data.suggestions.filter(s => s.by === me.id).slice().reverse();
   // decisions since the last visit get a "New" tag for this visit; the badge in the top bar clears
   const [since, setSince] = useState<string | undefined>(undefined);
   useEffect(() => { if (seen !== undefined && since === undefined) { setSince(seen); markSeen(); } }, [seen, since, markSeen]);
@@ -81,10 +82,23 @@ export default function MyEvents() {
       {sec('Coming up', '', upc)}
       {sec('Closed', 'Debrief done, leads logged.', closed)}
       {sec('Declined', '', dec)}
-      {data.suggestions.filter(s => s.by === me.id).length > 0 && (
-        <section className="sect"><h2 className="h2">Your suggestions</h2><div className="card">{data.suggestions.filter(s => s.by === me.id).map(s => (
-          <div key={s.id} className="mine" style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}><div><b>{s.name}</b><div className="sub">{[monthText(s.month), s.city].filter(Boolean).join(' · ') || 'No date yet'}</div></div>
-            <span className={`pill ${s.status === 'added' ? 'ok' : s.status === 'pending' ? 'wait' : 'off'}`}>{s.status === 'added' ? 'In the calendar' : s.status === 'pending' ? 'Waiting' : 'Dismissed'}</span></div>))}</div></section>
+      {mySugs.length > 0 && (
+        <section className="sect"><h2 className="h2">Your suggestions</h2><div className="card">{mySugs.map(s => {
+          const fresh = s.status !== 'pending' && !!since && !!s.decidedAt && s.decidedAt > since && s.decidedBy !== me.id;
+          return (
+            <div key={s.id} className="mine" style={{ gridTemplateColumns: 'minmax(0,1fr) auto' }}>
+              <div style={{ minWidth: 0 }}><b>{s.name}</b>{fresh && <span className="tag new">New</span>}
+                <div className="sub">{[sugWhen(s), sugPlace(s)].filter(Boolean).join(' · ')}</div>
+                {s.status === 'dismissed' && <p className="why" style={{ marginTop: 10, fontSize: 13.5 }}><b>{people.get(s.decidedBy || '')?.name?.split(' ')[0] || 'Roman'}:</b> {s.decisionNote || 'Not added for now.'}</p>}</div>
+              <div className="side" style={{ flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                <span className={`pill ${s.status === 'added' ? 'ok' : s.status === 'pending' ? 'wait' : 'off'}`}>{s.status === 'added' ? 'In the calendar' : s.status === 'pending' ? 'Waiting for Roman' : 'Not added'}</span>
+                {s.status === 'dismissed' && <button className="btn red sm" onClick={() => open({ kind: 'suggest', id: s.id })}>Improve and resend</button>}
+                {s.status === 'pending' && s.source === 'app' && <button className="btn line sm" onClick={() => open({ kind: 'suggest', id: s.id })}>Change</button>}
+                {s.status === 'added' && s.eventId && <button className="btn ghost sm" onClick={() => open({ kind: 'event', id: s.eventId!, view: 'detail' })}>Open</button>}
+              </div>
+            </div>
+          );
+        })}</div></section>
       )}
     </main>
   );
