@@ -48,7 +48,7 @@ await p.context().close();
 p = await as('roman@example.com');
 await p.waitForSelector('.tbl'); await shot(p, '20-approvals', true); await ov(p, 'approvals');
 await p.click('.tbl tbody tr.click >> nth=1'); await p.waitForTimeout(200); await shot(p, '21-approvals-expanded');
-await p.click('.tbl tbody tr.click >> nth=0 >> button.ok'); await p.waitForTimeout(1200);
+await p.click('.tbl tbody tr.click >> nth=0 >> button:has-text("Review")'); await p.waitForSelector('.detail .rv'); await shot(p, '21b-review'); await p.click('.detail button.ok'); await p.waitForTimeout(1200);
 await p.click('thead .check'); await p.waitForTimeout(150); await shot(p, '22-bulk');
 await p.click('.bulk >> text=Cancel');
 await p.click('[role=tab] >> text=Coverage gaps'); await p.waitForTimeout(200); await shot(p, '23-coverage');

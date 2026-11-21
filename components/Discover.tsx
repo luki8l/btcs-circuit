@@ -14,7 +14,7 @@ type View = 'list' | 'calendar' | 'year';
 const PRES: Record<Presence, string> = { going: 'Someone is going', requested: 'Waiting for approval', open: 'Nobody from us yet', flagged: 'Flagged by Roman', mine: 'My requests' };
 
 export default function Discover() {
-  const { events, presence, me, group, setGroup, data, open, today } = useApp();
+  const { events, presence, me, group, setGroup, data, open, today, hubspotAuto } = useApp();
   const [f, setF] = useState<Filters>(NO_FILTERS);
   const [view, setView] = useState<View>('list');
   const [sort, setSort] = useState<'date' | 'fit' | 'tier'>('date');
@@ -156,7 +156,7 @@ export default function Discover() {
         <section className="howto" aria-label="How it works">
           <div className="st"><i>1</i><div><b>Find an event</b><span>List, calendar or year view. Tier 1–2 are the key events.</span></div></div>
           <div className="st"><i>2</i><div><b>Request your spot</b><span>Say how you go and if you need a ticket. Takes 20 seconds.</span></div></div>
-          <div className="st"><i>3</i><div><b>Get approved, then HubSpot</b><span>Roman decides. Log it in HubSpot, debrief after the event.</span></div></div>
+          <div className="st"><i>3</i><div><b>{hubspotAuto ? 'Get approved, go' : 'Get approved, then HubSpot'}</b><span>{hubspotAuto ? 'Roman decides, Circuit adds it to HubSpot. Debrief after the event.' : 'Roman decides. Log it in HubSpot, debrief after the event.'}</span></div></div>
           <button className="x" onClick={hideHowto} aria-label="Hide this"><IcX /></button>
         </section>
       )}

@@ -84,7 +84,7 @@ await roman.goto(BASE + '/approvals'); await roman.waitForSelector('tr.click');
 const row = roman.locator('tr.click', { hasText: 'Race Condition Forum' });
 ok(await row.count() === 1, 'Roman sees the new request');
 ok((await api(sara, 'request_withdraw', { p_id: rr.j.data.id })).s === 200, 'sales withdraws while Roman still has it on screen');
-await row.locator('button:has-text("Approve")').click();
+await row.locator('button:has-text("Review")').click(); await roman.locator('.detail button:has-text("Approve")').click();
 const t1 = await toastText(roman);
 ok(/nothing changed/i.test(t1), `Roman is told nothing changed ("${t1.trim()}")`);
 await roman.waitForTimeout(800);

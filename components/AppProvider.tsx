@@ -14,6 +14,8 @@ export type DrawerState =
 type Ctx = {
   /** how people sign in: e-mail + password, or Microsoft */
   microsoft: boolean;
+  /** approvals put the event into HubSpot by themselves (HUBSPOT_AUTO_SYNC=on and a key) */
+  hubspotAuto: boolean;
   data: Data; me: Data['me']; today: Date; events: Ev[]; ev: Map<number, Ev>; people: Map<string, Person>;
   active: Map<number, Req[]>; flagged: Set<number>; presence: (id: number) => PresenceInfo;
   group: number; setGroup: (g: number) => void;
@@ -29,7 +31,7 @@ type Ctx = {
 const C = createContext<Ctx | null>(null);
 export const useApp = () => { const c = useContext(C); if (!c) throw new Error('no app context'); return c; };
 
-export default function AppProvider({ data, microsoft = false, children }: { data: Data; microsoft?: boolean; children: React.ReactNode }) {
+export default function AppProvider({ data, microsoft = false, hubspotAuto = false, children }: { data: Data; microsoft?: boolean; hubspotAuto?: boolean; children: React.ReactNode }) {
   const router = useRouter();
   const today = useMemo(() => pd(data.today), [data.today]);
   const events = useMemo(() => data.events.map(e => prep(e, today)), [data.events, today]);
@@ -121,7 +123,7 @@ export default function AppProvider({ data, microsoft = false, children }: { dat
     return () => { document.removeEventListener('mouseover', over); document.removeEventListener('mousemove', move); document.removeEventListener('scroll', hide, true); };
   }, []);
 
-  const value: Ctx = { microsoft, data, me: data.me, today, events, ev, people, active, flagged, presence, group, setGroup, drawer, open, close, toast, act, busy, palette, setPalette, seen, markSeen, isNew };
+  const value: Ctx = { microsoft, hubspotAuto, data, me: data.me, today, events, ev, people, active, flagged, presence, group, setGroup, drawer, open, close, toast, act, busy, palette, setPalette, seen, markSeen, isNew };
   return (
     <C.Provider value={value}>
       {children}

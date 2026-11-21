@@ -205,6 +205,7 @@ img { max-width: 100%; }
 .tabs button[aria-selected="true"]::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: -1px; height: 2px; background: var(--red); }
 .tabs .n { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--sunk); color: var(--ink-2); font-size: 12px; display: inline-grid; place-items: center; }
 .tabs button[aria-selected="true"] .n { background: var(--red); color: #fff; }
+.m-only { display: none; }
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 24px; }
 .kpi { padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; min-width: 0; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
 .kpi span { font-size: 13px; color: var(--ink-2); font-weight: 520; }
@@ -437,6 +438,22 @@ details.more[open] summary { margin-bottom: 12px; }
 .detail { background: var(--card-2); }
 .detail > td { padding: 6px 14px 20px 58px !important; }
 .detail .grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px 30px; }
+/* Roman's review of one request: everything sales entered, the event, then the decision */
+.rv { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 22px 36px; padding-top: 6px; }
+.rv > section > .lab { margin-bottom: 10px; }
+.rv-who { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.rv-who b { display: block; font-weight: 600; }
+.rv-ev { margin-bottom: 12px; }
+.rv-ev b { display: block; font-weight: 600; font-size: 15px; }
+.rv-facts { display: grid; gap: 8px; margin: 0; }
+.rv-facts > div { display: grid; grid-template-columns: 128px minmax(0, 1fr); gap: 12px; align-items: baseline; }
+.rv-facts dt { font-size: 12.5px; color: var(--ink-3); }
+.rv-facts dd { margin: 0; font-size: 14px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.rv-facts dd small { color: var(--ink-3); font-size: 12.5px; }
+.rv-o + .rv-o::before { content: '·'; margin-right: 8px; color: var(--ink-3); }
+.rv-decide { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.rv-decide .input { flex: 1 1 280px; height: 38px; }
+.rv-decide .btn { height: 38px; }
 .why { border-left: 3px solid var(--line-2); padding-left: 12px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
 .ctx { display: flex; flex-wrap: wrap; gap: 6px; }
 .ro { display: flex; gap: 10px; align-items: center; padding: 11px 14px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); color: var(--ink-2); font-size: 13.5px; margin-bottom: 14px; }
@@ -576,6 +593,31 @@ details.more[open] summary { margin-bottom: 12px; }
 .acct-f .ok-t { color: var(--ok); font-size: 13.5px; font-weight: 560; }
 .acct-f > div { margin-top: 10px; }
 @media (max-width: 640px) {
+  /* Roman's inbox on a phone: one card per request, Approve right there (no sideways scrolling) */
+  .tbl.inbox, .tbl.inbox tbody { display: block; }
+  .tbl.inbox thead { display: none; }
+  .tbl.inbox tr.grp, .tbl.inbox tr.detail { display: block; }
+  .tbl.inbox tr.grp > td, .tbl.inbox tr.detail > td { display: block; }
+  .tbl.inbox tr.click { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; column-gap: 10px; row-gap: 10px; align-items: center; padding: 14px 14px 16px 12px;
+    grid-template-areas: "chk ev ev" ". who tier" ". how tk" ". pol also" ". dec dec"; border-bottom: 1px solid var(--line); }
+  .tbl.inbox tr.click > td { padding: 0; border: 0; min-width: 0; }
+  .tbl.inbox .c-chk { grid-area: chk; align-self: start; padding-top: 14px !important; }
+  .tbl.inbox .c-ev { grid-area: ev; }
+  .tbl.inbox .c-who { grid-area: who; }
+  .tbl.inbox .c-tier { grid-area: tier; justify-self: end; }
+  .tbl.inbox .c-how { grid-area: how; }
+  .tbl.inbox .c-tk { grid-area: tk; justify-self: end; }
+  .tbl.inbox .c-pol { grid-area: pol; }
+  .tbl.inbox .c-also { grid-area: also; justify-self: end; }
+  .tbl.inbox .c-dec { grid-area: dec; text-align: left; }
+  .tbl.inbox .m-only { display: inline; }
+  .tbl.inbox .dt { width: 58px; }
+  .tbl.inbox .c-dec .btn { width: 100%; justify-content: center; height: 40px; }
+  .tbl.inbox tr.detail > td { padding: 4px 14px 18px !important; }
+  .rv { grid-template-columns: minmax(0, 1fr); }
+  .rv-facts > div { grid-template-columns: 110px minmax(0, 1fr); }
+  .rv-decide .input { flex-basis: 100%; }
+  .rv-decide .btn { flex: 1; justify-content: center; height: 42px; }
   .tour-card { top: auto !important; left: 12px !important; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); width: auto; }
   .tour-offer { right: 12px; left: 12px; width: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
 }
@@ -635,7 +677,10 @@ details.more[open] summary { margin-bottom: 12px; }
   .login-l { border-right: 0; border-bottom: 1px solid var(--line); padding: 28px 20px; }
   .login-l .title { font-size: 32px; }
   .login-l .art { display: none; }
-  .kpi b { font-size: 28px; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 18px; }   /* phones: the numbers at a glance, the inbox right below */
+  .kpi { padding: 12px 14px; gap: 4px; }
+  .kpi span { font-size: 12.5px; }
+  .kpi b { font-size: 24px; }
   .hbar { grid-template-columns: 90px minmax(0, 1fr) 56px; }
   .search { max-width: none; }
   .dd-panel { position: fixed; left: 12px !important; right: 12px !important; top: auto; bottom: 12px; max-height: 70vh; }

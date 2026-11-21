@@ -7,7 +7,7 @@ import { IcCheck, IcPlus, IcCal } from './icons';
 import { GS, MODES, TICKETS, chf, dateLabel, place, monthText, sugWhen, sugPlace, type Req } from '@/lib/model';
 
 export default function MyEvents() {
-  const { me, data, ev, open, act, busy, group, setGroup, people, today, seen, markSeen, isNew } = useApp();
+  const { me, data, ev, open, act, busy, group, setGroup, people, today, seen, markSeen, isNew, hubspotAuto } = useApp();
   const mySugs = data.suggestions.filter(s => s.by === me.id).slice().reverse();
   // decisions since the last visit get a "New" tag for this visit; the badge in the top bar clears
   const [since, setSince] = useState<string | undefined>(undefined);
@@ -62,7 +62,7 @@ export default function MyEvents() {
     <main className="page">
       <section className="head">
         <div><h1 className="title">My events</h1>
-          <p className="lede">Your requests, Roman’s decisions and what’s left to do: log the event in HubSpot, and after the event a 60-second debrief.</p></div>
+          <p className="lede">{hubspotAuto ? 'Your requests, Roman’s decisions and what’s left to do. Approved events go into HubSpot by themselves; after the event: assign your leads and a 60-second debrief.' : 'Your requests, Roman’s decisions and what’s left to do: log the event in HubSpot, and after the event a 60-second debrief.'}</p></div>
         <div className="stats">
           <div className="stat"><b className="num">{upc.length + act1.length}</b><span>approved</span></div>
           <div className="stat"><b className="num">{wait.length}</b><span>waiting</span></div>

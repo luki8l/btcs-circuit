@@ -18,6 +18,8 @@ type Step = {
   text: string;
   /** the text when people sign in with Microsoft, if different */
   microsoft?: string;
+  /** the text when approvals put events into HubSpot by themselves */
+  hubspot?: string;
 };
 
 // a real upcoming key event to show the event page and the request form on (nothing gets sent)
@@ -40,7 +42,7 @@ const SALES: Step[] = [
   { path: '/discover', click: VIEW(1), el: ['.erow:not(.past)'], title: 'One event per row', text: 'Date, place, tier and who from Bitcoin Suisse is already going. Tier 1–2 are the key events. Click a row to see everything about it.' },
   { path: '/discover', drawer: a => sample(a, 'detail'), el: ['.drawer'], title: 'The event page', text: 'Who goes, what the tier means, who you meet there and the details from the masterlist. The red button at the bottom asks for your spot.' },
   { path: '/discover', drawer: a => sample(a, 'request'), el: ['.drawer'], title: 'Ask for your spot', text: 'How you go, the ticket, who you want to meet and a short why. Takes 20 seconds, and Roman sees it right away. (Nothing is sent in this walkthrough.)' },
-  { path: '/my', el: ['.head'], title: 'My events', text: 'Roman’s decisions land here, marked “New”. Once approved: create the event in HubSpot and tick it off. After the event: assign the leads in HubSpot and do the 60-second debrief. Went somewhere without asking first? Open the past event and press “I was there”.' },
+  { path: '/my', el: ['.head'], title: 'My events', text: 'Roman’s decisions land here, marked “New”. Once approved: create the event in HubSpot and tick it off. After the event: assign the leads in HubSpot and do the 60-second debrief. Went somewhere without asking first? Open the past event and press “I was there”.', hubspot: 'Roman’s decisions land here, marked “New”. Once approved, Circuit puts the event into HubSpot for you. After the event: assign the leads in HubSpot and do the 60-second debrief. Went somewhere without asking first? Open the past event and press “I was there”.' },
   { path: '/team', el: ['.matrix'], title: 'Who goes where', text: 'Everyone’s trips by month. Solid means approved, dashed means waiting for Roman. Check here so two people don’t cover the same clients.' },
   DONE,
 ];
@@ -48,7 +50,7 @@ const SALES: Step[] = [
 const EVENTS: Step[] = [
   { title: 'Welcome to Circuit', text: 'Sales ask to go to external events, you decide, and you see what it brings: coverage, budget and leads. One minute.' },
   { path: '/approvals', el: ['.kpis'], title: 'Your numbers', text: 'Requests waiting for you, approved trips, the ticket budget, key events nobody covers yet and new event suggestions.' },
-  { path: '/approvals', click: TAB(1), el: ['.tbl tbody tr.click', '.tabs ~ .card'], title: 'Decide in one click', text: 'Each row shows the event, the tier, who asks, how they go, the ticket and the policy check. Green button approves; ✕ declines with a reason for sales. Click a row for their why. Tick several rows to approve them at once. “Decided” lists everything you approved or declined.' },
+  { path: '/approvals', click: TAB(1), el: ['.tbl tbody tr.click', '.tabs ~ .card'], title: 'Review, then decide', text: 'Each row shows the event, the tier, who asks, how they go, the ticket and the policy check. “Review” opens everything sales entered (why, who they want to meet, cost) next to the event; approve or decline right there, with a note for sales if you like. Tick several rows to decide them at once. “Decided” lists everything you approved or declined.' },
   { path: '/approvals', click: TAB(3), el: ['.tabs ~ .card'], title: 'Flag the gaps', text: 'Tier 1–2 events where nobody from us goes yet. “Flag for sales” marks it “Flagged by Roman” for sales; “Send someone” books a person directly.' },
   { path: '/approvals', click: TAB(4), el: ['.tabs ~ .card'], title: 'Suggestions', text: 'Events sales missed in the list, with everything they knew. “Add to calendar” takes it all over and opens the editor for the tier. “Not now…” sends it back with a short reason; they can improve and resend it.' },
   { path: '/insights', el: ['.kpis'], title: 'Overview', text: 'Where Bitcoin Suisse shows up, what it costs and what comes back. Every number updates as sales request, you decide and people debrief.' },
@@ -191,7 +193,7 @@ export default function Tour({ onClose }: { onClose: () => void }) {
         <button className="x" onClick={finish} aria-label="Close the walkthrough"><IcX s={15} /></button>
         <span className="k">Walkthrough · {i + 1} of {steps.length}</span>
         <h3>{step.title}</h3>
-        <p>{app.microsoft && step.microsoft ? step.microsoft : step.text}</p>
+        <p>{app.microsoft && step.microsoft ? step.microsoft : app.hubspotAuto && step.hubspot ? step.hubspot : step.text}</p>
         <div className="row">
           <span className="tour-dots" aria-hidden="true">{steps.map((_, n) => <i key={n} className={n === i ? 'on' : n < i ? 'done' : ''} />)}</span>
           {i > 0 && <button className="btn sm line" onClick={back}>Back</button>}

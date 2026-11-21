@@ -97,11 +97,12 @@ const session = async c => (await c.cookies()).find(x => x.name === 'circuit_ses
     console.log('approve (database arrays, JSON) and sign out');
     const R = await ctx(b, 'roman');
     await signIn(R.p, 'roman@example.com', '/approvals'); await dismissTour(R.p);
-    await R.p.waitForSelector('button[aria-label^="Approve "]');
-    const before = await R.p.locator('button[aria-label^="Approve "]').count();
-    await R.p.locator('button[aria-label^="Approve "]').first().click();
-    await R.p.waitForFunction(n => document.querySelectorAll('button[aria-label^="Approve "]').length < n, before, { timeout: 10000 }).catch(() => {});
-    ok(await R.p.locator('button[aria-label^="Approve "]').count() === before - 1, 'Roman approves a request');
+    await R.p.waitForSelector('button[aria-label^="Review "]');
+    const before = await R.p.locator('tr.click').count();
+    await R.p.locator('button[aria-label^="Review "]').first().click();
+    await R.p.locator('.detail button[aria-label^="Approve "]').click();
+    await R.p.waitForFunction(n => document.querySelectorAll('tr.click').length < n, before, { timeout: 10000 }).catch(() => {});
+    ok(await R.p.locator('tr.click').count() === before - 1, 'Roman reviews a request and approves it');
     await R.p.click('.me, [aria-label="Account menu"], header button:has(.av)').catch(() => {});
     await R.p.evaluate(() => { const f = document.createElement('form'); f.method = 'post'; f.action = '/auth/signout'; document.body.appendChild(f); f.submit(); });
     await R.p.waitForURL(/signedout=1/, { timeout: 10000 }).catch(() => {});

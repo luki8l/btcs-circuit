@@ -1,21 +1,22 @@
 'use client';
 // The events team's inbox: decide requests (one or many), see coverage gaps, add suggested events.
 import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useApp } from './AppProvider';
 import { Tier, DateBlock, Av, Confirm, Blank } from './ui';
 import ReportMenu from './ReportMenu';
-import { IcCheck, IcX, IcFlag, IcUsers, IcWarn, IcInfo } from './icons';
-import { GS, MODES, ML, POLICY, chf, dateLabel, place, bestFit, isStaff, monthText, sugWhen, sugPlace, type Ev, type Suggestion } from '@/lib/model';
+import { IcCheck, IcX, IcFlag, IcUsers, IcWarn, IcInfo, IcChevDown } from './icons';
+import { GS, MODES, ML, POLICY, roleText, chf, dateLabel, place, bestFit, isStaff, monthText, sugWhen, sugPlace, type Ev, type Suggestion } from '@/lib/model';
 
 type Tab = 'inbox' | 'decided' | 'coverage' | 'suggestions';
 
 export default function Approvals() {
-  const { me, data, ev, people, presence, act, busy, open, toast } = useApp();
+  const { me, data, ev, people, presence, act, busy, open, toast, hubspotAuto } = useApp();
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>('inbox');
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [exp, setExp] = useState<string | null>(null);
   const [note, setNote] = useState('');
-  const [declining, setDeclining] = useState<string | null>(null);
   const [who, setWho] = useState('');
   const [covTiers, setCovTiers] = useState<number[]>([1, 2]);
   // after adding a suggested event, open its editor so country, tier and fit get filled in
@@ -25,6 +26,7 @@ export default function Approvals() {
   const pending = data.requests.filter(r => r.status === 'requested' && ev.has(r.eventId) && (!who || r.personId === who))
     .sort((a, b) => (ev.get(a.eventId)!.sd?.getTime() ?? 9e15) - (ev.get(b.eventId)!.sd?.getTime() ?? 9e15));
   const decided = data.requests.filter(r => (r.status === 'approved' || r.status === 'declined') && r.decidedAt).sort((a, b) => b.decidedAt!.localeCompare(a.decidedAt!)).slice(0, 80);
+  const showHs = hubspotAuto || decided.some(r => !!ev.get(r.eventId)?.hubspotId);
   const upcomingApproved = data.requests.filter(r => r.status === 'approved' && ev.get(r.eventId) && !ev.get(r.eventId)!.past);
   const spend = data.requests.filter(r => r.status === 'approved').reduce((a, r) => a + Number(r.cost || 0), 0);
   const gaps = useMemo(() => [...ev.values()].filter(e => !e.past && e.mode !== 'tbd' && covTiers.includes(e.tk) && !presence(e.id).approved.length && !presence(e.id).requested.length)
@@ -40,10 +42,13 @@ export default function Approvals() {
     if (!r.ok) return;
     const done = Number(r.data) || 0, verb = status === 'approved' ? 'Approved' : 'Declined';
     // someone may have withdrawn or decided in the meantime: the database only changes requests that are still waiting
-    if (done === ids.length) toast(`${verb}: ${done} request${done > 1 ? 's' : ''}`);
+    const toHs = status === 'approved' && hubspotAuto && done > 0;
+    if (done === ids.length) toast(`${verb}: ${done} request${done > 1 ? 's' : ''}${toHs ? ' · goes to HubSpot automatically' : ''}`);
     else if (done === 0) toast('Nothing changed: it was withdrawn or decided in the meantime.', true);
     else toast(`${verb} ${done} of ${ids.length}. The others were changed in the meantime.`, true);
-    setSel(new Set()); setNote(''); setDeclining(null); setExp(null);
+    setSel(new Set()); setNote(''); setExp(null);
+    // HubSpot is filled in right after the answer; look again so "In HubSpot" shows up under Decided
+    if (toHs) setTimeout(() => router.refresh(), 4000);
   }
   const policyChip = (e: Ev) => e.past ? <span className="pill off">Already happened</span> : e.tk >= 4 ? <span className="pill red"><IcWarn s={12} />Needs exception</span> : e.tk ? <span className="pill ok"><IcCheck s={11} />Fits the policy</span> : <span className="pill off">Not rated</span>;
   const allSel = pending.length > 0 && pending.every(r => sel.has(r.id));
@@ -52,7 +57,7 @@ export default function Approvals() {
   return (
     <main className="page">
       <section className="head">
-        <div><h1 className="title">Requests</h1><p className="lede">{ro ? 'Every request from sales to go to an external event, and what Roman decided.' : 'Every request from sales in one inbox. Check the row, then approve or decline. Click a row for the details.'}</p></div>
+        <div><h1 className="title">Requests</h1><p className="lede">{ro ? 'Every request from sales to go to an external event, and what Roman decided.' : 'Every request from sales in one inbox. Open one with “Review” to see everything they entered, then approve or decline.'}</p></div>
         <div className="actions"><ReportMenu /></div>
       </section>
       <div className="kpis">
@@ -73,7 +78,7 @@ export default function Approvals() {
         {requesters.length > 1 && <div className="toolbar"><select className="select sm" style={{ width: 240 }} value={who} onChange={e => setWho(e.target.value)} aria-label="Filter by person"><option value="">Everyone</option>{requesters.map(p => <option key={p!.id} value={p!.id}>{p!.name}</option>)}</select></div>}
         {!pending.length ? <div className="card"><Blank icon={<IcCheck s={22} />} title="Nothing waiting" text="When someone from sales requests an event, it lands here with the policy check, the cost and who else is going. Approving takes one click." /></div> : (
           <div className="card scroll-x">
-            <table className="tbl">
+            <table className="tbl inbox">
               <thead><tr>
                 {!ro && <th style={{ width: 40 }}><button className={`check ${allSel ? 'on' : sel.size ? 'some' : ''}`} aria-label="Select all" onClick={() => setSel(allSel ? new Set() : new Set(pending.map(r => r.id)))}>{allSel && <IcCheck s={12} />}</button></th>}
                 <th>Event</th><th>Tier</th><th>Who</th><th>How</th><th className="r">Ticket</th><th>Policy</th><th>Also going</th>{!ro && <th className="r">Decide</th>}
@@ -86,42 +91,54 @@ export default function Approvals() {
                     <Fragment key={r.id}>
                       {head && <tr className="grp"><td colSpan={9}>{mk === 'TBD' ? 'Date TBD' : `${ML[Number(mk.slice(5)) - 1]} ${mk.slice(0, 4)}`}</td></tr>}
                       <tr className={`click ${sel.has(r.id) || exp === r.id ? 'sel' : ''}`} onClick={() => setExp(x => x === r.id ? null : r.id)}>
-                        {!ro && <td onClick={x => x.stopPropagation()}><button className={`check ${sel.has(r.id) ? 'on' : ''}`} aria-label="Select" onClick={() => setSel(s => { const n = new Set(s); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); return n; })}>{sel.has(r.id) && <IcCheck s={12} />}</button></td>}
-                        <td><div className="ev"><DateBlock e={e} /><div style={{ minWidth: 0 }}><b>{e.name}</b><span>{place(e)}</span>{e.past && <span className="tag" style={{ marginTop: 4 }}>Logged after the event</span>}</div></div></td>
-                        <td><Tier e={e} /></td>
-                        <td><div style={{ display: 'flex', gap: 9, alignItems: 'center' }}><Av p={p} /><div><b style={{ fontWeight: 560 }}>{p?.name}</b><div className="dim small">{p?.market || p?.team}</div></div></div></td>
-                        <td className="nowrap">{MODES[r.mode][0].split(' & ')[0]}<div className="dim small">{e.past ? 'was there' : `${r.meetingsPlanned} meetings`}</div></td>
-                        <td className="r nowrap">{r.ticket === 'paid' ? chf(r.cost) : <span className="dim">{r.ticket === 'free' ? 'free' : 'covered'}</span>}</td>
-                        <td>{policyChip(e)}</td>
-                        <td>{others.length ? <span className="avs">{others.slice(0, 4).map(o => <Av key={o.id} p={people.get(o.personId)} req={o.status === 'requested'} size="sm" />)}</span> : <span className="dim small">no one</span>}</td>
-                        {!ro && <td className="r nowrap" onClick={x => x.stopPropagation()}>
-                          <span style={{ display: 'inline-flex', gap: 6 }}>
-                            <button className="btn ok sm" disabled={busy} onClick={() => decide([r.id], 'approved', '')} aria-label={`Approve ${p?.name}`}><IcCheck s={13} />Approve</button>
-                            <button className="btn line sm" disabled={busy} onClick={() => { setExp(r.id); setDeclining(r.id); }} aria-label={`Decline ${p?.name}`}><IcX s={13} /></button>
-                          </span>
+                        {!ro && <td className="c-chk" onClick={x => x.stopPropagation()}><button className={`check ${sel.has(r.id) ? 'on' : ''}`} aria-label="Select" onClick={() => setSel(s => { const n = new Set(s); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); return n; })}>{sel.has(r.id) && <IcCheck s={12} />}</button></td>}
+                        <td className="c-ev"><div className="ev"><DateBlock e={e} /><div style={{ minWidth: 0 }}><b>{e.name}</b><span>{place(e)}</span>{e.past && <span className="tag" style={{ marginTop: 4 }}>Logged after the event</span>}</div></div></td>
+                        <td className="c-tier"><Tier e={e} /></td>
+                        <td className="c-who"><div style={{ display: 'flex', gap: 9, alignItems: 'center' }}><Av p={p} /><div><b style={{ fontWeight: 560 }}>{p?.name}</b><div className="dim small">{p?.market || p?.team}</div></div></div></td>
+                        <td className="nowrap c-how">{MODES[r.mode][0].split(' & ')[0]}<div className="dim small">{e.past ? 'was there' : `${r.meetingsPlanned} meetings`}</div></td>
+                        <td className="r nowrap c-tk">{r.ticket === 'paid' ? chf(r.cost) : <span className="dim">{r.ticket === 'free' ? 'free' : 'covered'}</span>}</td>
+                        <td className="c-pol">{policyChip(e)}</td>
+                        <td className="c-also">{others.length ? <span className="avs"><span className="m-only dim small" style={{ marginRight: 6 }}>Also going</span>{others.slice(0, 4).map(o => <Av key={o.id} p={people.get(o.personId)} req={o.status === 'requested'} size="sm" />)}</span> : <span className="dim small">no one<span className="m-only"> else going</span></span>}</td>
+                        {!ro && <td className="r nowrap c-dec" onClick={x => x.stopPropagation()}>
+                          <button className={`btn sm ${exp === r.id ? 'line' : 'dark'}`} onClick={() => { setExp(x => x === r.id ? null : r.id); setNote(''); }} aria-expanded={exp === r.id} aria-label={`Review ${p?.name}`}>
+                            {exp === r.id ? 'Close' : <>Review<IcChevDown s={13} /></>}
+                          </button>
                         </td>}
                       </tr>
                       {exp === r.id && (
                         <tr className="detail"><td colSpan={9}>
-                          <div className="grid">
-                            <div>
-                              <p className="lab" style={{ marginBottom: 8 }}>Why</p>
-                              {r.reason ? <p className="why">{r.reason}</p> : <p className="dim">No reason given.</p>}
-                              <p className="lab" style={{ margin: '16px 0 8px' }}>Wants to meet</p>
-                              <div className="ctx">{r.groups.map(g => <span key={g} className="tag">{GS[g]} · fit {e.fit[g] ?? '–'}/5</span>)}</div>
-                            </div>
-                            <div>
-                              <p className="lab" style={{ marginBottom: 8 }}>Policy · Tier {e.tk || '–'}</p>
-                              <p className="muted small">{POLICY[e.tk][1]}</p>
-                              <p className="lab" style={{ margin: '16px 0 8px' }}>Event</p>
-                              <p className="muted small">{dateLabel(e)} · {e.audience || 'audience n/a'} · ticket {e.costTicket || 'n/a'}</p>
-                              <button className="btn ghost sm" style={{ marginTop: 6, paddingLeft: 0 }} onClick={() => open({ kind: 'event', id: e.id, view: 'detail' })}>Open event →</button>
-                            </div>
+                          <div className="rv">
+                            <section>
+                              <p className="lab">The request</p>
+                              <div className="rv-who"><Av p={p} /><div><b>{p?.name}</b><span className="dim small">{[p?.title, p?.market || p?.team].filter(Boolean).join(' · ') || (p ? roleText(p) : '')}</span></div>
+                                <span className="dim small" style={{ marginLeft: 'auto' }}>sent {new Date(r.createdAt).toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich' })}</span></div>
+                              <dl className="rv-facts">
+                                <div><dt>How</dt><dd>{MODES[r.mode][0]}<small>{MODES[r.mode][1]}</small></dd></div>
+                                <div><dt>Ticket</dt><dd>{r.ticket === 'paid' ? <>{chf(r.cost)}<small>paid, needs budget</small></> : r.ticket === 'free' ? <>Free<small>guest, speaker or partner pass</small></> : <>Has one<small>ticket or invite already there</small></>}</dd></div>
+                                <div><dt>{e.past ? 'Meetings' : 'Meetings planned'}</dt><dd>{e.past ? 'was there' : r.meetingsPlanned || '–'}</dd></div>
+                              </dl>
+                              <p className="lab" style={{ margin: '14px 0 8px' }}>Wants to meet</p>
+                              <div className="ctx">{r.groups.length ? r.groups.map(g => <span key={g} className="tag">{GS[g]} · fit {e.fit[g] ?? '–'}/5</span>) : <span className="dim small">not given</span>}</div>
+                              <p className="lab" style={{ margin: '14px 0 8px' }}>Why</p>
+                              {r.reason ? <p className="why">{r.reason}</p> : <p className="dim small">No reason given.</p>}
+                            </section>
+                            <section>
+                              <p className="lab">The event</p>
+                              <p className="rv-ev"><b>{e.name}</b><span className="dim small">{dateLabel(e)} · {place(e)}</span></p>
+                              <dl className="rv-facts">
+                                <div><dt>Tier</dt><dd><Tier e={e} /><small>{POLICY[e.tk][1]}</small></dd></div>
+                                <div><dt>Policy</dt><dd>{policyChip(e)}</dd></div>
+                                <div><dt>Also going</dt><dd>{others.length ? others.map(o => <span key={o.id} className="rv-o">{people.get(o.personId)?.name}<small>{o.status === 'requested' ? ' (asked)' : ''}</small></span>) : <span className="dim">no one else</span>}</dd></div>
+                                <div><dt>Audience</dt><dd>{e.audience || <span className="dim">n/a</span>}</dd></div>
+                                <div><dt>Ticket price</dt><dd>{e.costTicket || <span className="dim">n/a</span>}</dd></div>
+                              </dl>
+                              <button className="btn ghost sm" style={{ marginTop: 8, paddingLeft: 0 }} onClick={() => open({ kind: 'event', id: e.id, view: 'detail' })}>Everything about the event →</button>
+                            </section>
                           </div>
-                          {!ro && <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
-                            <input className="input" style={{ flex: '1 1 260px', height: 36 }} placeholder={declining === r.id ? 'Reason for sales (optional)' : 'Note for sales (optional)'} value={note} onChange={x => setNote(x.target.value)} maxLength={1000} autoFocus={declining === r.id} />
-                            <button className="btn ok" disabled={busy} onClick={() => decide([r.id], 'approved', note)}><IcCheck s={14} />Approve</button>
-                            <button className="btn line" disabled={busy} onClick={() => decide([r.id], 'declined', note)}>Decline</button>
+                          {!ro && <div className="rv-decide">
+                            <input className="input" placeholder={`Note for ${p?.name?.split(' ')[0] || 'sales'} (optional)`} value={note} onChange={x => setNote(x.target.value)} maxLength={1000} aria-label="Note for sales" />
+                            <button className="btn ok" disabled={busy} onClick={() => decide([r.id], 'approved', note)} aria-label={`Approve ${p?.name}`}><IcCheck s={14} />Approve</button>
+                            <button className="btn line" disabled={busy} onClick={() => decide([r.id], 'declined', note)} aria-label={`Decline ${p?.name}`}><IcX s={13} />Decline</button>
                           </div>}
                         </td></tr>
                       )}
@@ -145,7 +162,7 @@ export default function Approvals() {
 
       {tab === 'decided' && (!decided.length ? <div className="card"><Blank title="No decisions yet" text="Approved and declined requests show up here, with who decided and when." /></div> : (
         <div className="card scroll-x"><table className="tbl">
-          <thead><tr><th>Event</th><th>Who</th><th>Decision</th><th>By</th><th>When</th><th>Note</th><th /></tr></thead>
+          <thead><tr><th>Event</th><th>Who</th><th>Decision</th><th>By</th><th>When</th><th>Note</th>{showHs && <th>HubSpot</th>}<th /></tr></thead>
           <tbody>{decided.map(r => {
             const e = ev.get(r.eventId); if (!e) return null;
             return (
@@ -156,6 +173,8 @@ export default function Approvals() {
                 <td className="nowrap">{people.get(r.decidedBy || '')?.name || '–'}</td>
                 <td className="nowrap dim">{new Date(r.decidedAt!).toLocaleDateString('de-CH', { timeZone: 'Europe/Zurich' })}</td>
                 <td className="dim" style={{ maxWidth: 280 }}>{r.decisionNote || '–'}</td>
+                {showHs && <td className="nowrap">{r.status !== 'approved' ? null : e.hubspotId ? <span className="pill ok"><IcCheck s={11} />In HubSpot</span>
+                  : !ro ? <button className="btn ghost sm" style={{ paddingLeft: 0 }} onClick={() => open({ kind: 'event', id: e.id, view: 'detail' })}>Add to HubSpot →</button> : <span className="dim">–</span>}</td>}
                 <td className="r">{!ro && !r.rating && <Confirm label="Reopen" sure="Back to inbox" disabled={busy} onYes={() => act('request_reopen', { p_id: r.id }, 'Back in the inbox')} />}</td>
               </tr>
             );
